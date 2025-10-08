@@ -3,6 +3,10 @@ Mimi Chen, Paige McNamara-Pittler, Anantika Mannby
 October 7, 2025  
 Astrology Match PRD
 
+PRD Doc: https://docs.google.com/document/d/1DiMbXtYTxf4LgjjfCq4xsWFCas1Zw3_kCcA3qi4U1fg/edit?tab=t.0
+Design: https://www.figma.com/design/aIDs9yXEUDWmN2lwzwr9sp/Untitled?node-id=0-1&t=g3xRVZ5jCnAkUSr5-1
+
+
 **Project overview**  
 This app provides an intuitive, engaging experience to discover their compatibility (whether romantic or platonic) with others based on their zodiac signs.
 
