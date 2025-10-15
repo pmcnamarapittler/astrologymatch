@@ -7,9 +7,16 @@
 
 import SwiftUI
 
-/ MARK: - Main App Structure
+// MARK: - Main App Structure
 struct ContentView: View {
     @State private var currentScreen = 0
+    @State private var userName: String = ""
+    @State private var userBirthday: Date = Date()
+    @State private var userTimeOfBirth: Date = Date()
+    @State private var partnerName: String = ""
+    @State private var partnerBirthday: Date = Date()
+    @State private var partnerTimeOfBirth: Date = Date()
+    @State private var compatibilityData: SupabaseService.CompatibilityResponse?
     
     var body: some View {
         TabView(selection: $currentScreen) {
@@ -20,7 +27,10 @@ struct ContentView: View {
             })
             .tag(0)
             
-            UserInfoView(
+			UserInfoView(
+				name: $userName,
+				birthday: $userBirthday,
+				timeOfBirth: $userTimeOfBirth,
                 onContinue: {
                     withAnimation(.easeInOut(duration: 0.5)) {
                         currentScreen = 2
@@ -34,15 +44,99 @@ struct ContentView: View {
             )
             .tag(1)
             
-            PartnerInfoView(onBack: {
+            PartnerInfoView(
+                name: $partnerName,
+                birthday: $partnerBirthday,
+                timeOfBirth: $partnerTimeOfBirth,
+                onSubmit: {
+                    // Fetch compatibility data before proceeding
+                    fetchCompatibilityData()
+                },
+                onBack: {
                 withAnimation(.easeInOut(duration: 0.5)) {
                     currentScreen = 1
                 }
-            })
+            }
+            )
             .tag(2)
+            
+            ResultsView(
+                userName: userName,
+                partnerName: partnerName,
+                userBirthday: userBirthday,
+                partnerBirthday: partnerBirthday,
+                userTimeOfBirth: userTimeOfBirth,
+                partnerTimeOfBirth: partnerTimeOfBirth,
+                compatibilityData: compatibilityData,
+                onStartOver: {
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        currentScreen = 0
+                        // Reset all form data
+                        userName = ""
+                        userBirthday = Date()
+                        userTimeOfBirth = Date()
+                        partnerName = ""
+                        partnerBirthday = Date()
+                        partnerTimeOfBirth = Date()
+                        compatibilityData = nil
+                    }
+                }
+            )
+            .tag(3)
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
         .edgesIgnoringSafeArea(.all)
+    }
+    
+    private func fetchCompatibilityData() {
+        let userSign = ZodiacUtils.zodiacSignName(from: userBirthday)
+        let partnerSign = ZodiacUtils.zodiacSignName(from: partnerBirthday)
+        
+        SupabaseService.shared.getCompatibility(sign1: userSign, sign2: partnerSign) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let compatibility):
+                    self.compatibilityData = compatibility
+                    // Store the pairing data with compatibility results
+                    self.storePairingData(compatibility: compatibility)
+                    // Navigate to results screen
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        self.currentScreen = 3
+                    }
+                case .failure(_):
+                    // Set fallback data
+                    let fallbackCompatibility = SupabaseService.CompatibilityResponse(
+                        Sign1: userSign,
+                        Sign2: partnerSign,
+                        CompatibilityScore: 75,
+                        Blurb: "Unable to load detailed compatibility data. Your signs show good potential for connection."
+                    )
+                    self.compatibilityData = fallbackCompatibility
+                    // Store the pairing data with fallback compatibility
+                    self.storePairingData(compatibility: fallbackCompatibility)
+                    // Navigate to results screen
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        self.currentScreen = 3
+                    }
+                }
+            }
+        }
+    }
+    
+    private func storePairingData(compatibility: SupabaseService.CompatibilityResponse) {
+        let aDate = combine(date: userBirthday, time: userTimeOfBirth)
+        let bDate = combine(date: partnerBirthday, time: partnerTimeOfBirth)
+        
+        SupabaseService.shared.createPairing(
+            aName: userName,
+            aDate: aDate,
+            bName: partnerName,
+            bDate: bDate,
+            compatibilityScore: compatibility.CompatibilityScore,
+            insights: compatibility.Blurb
+        ) { result in
+            // Handle result silently
+        }
     }
 }
 
@@ -153,9 +247,9 @@ struct LandingView: View {
 
 // MARK: - User Info View
 struct UserInfoView: View {
-    @State private var name = ""
-    @State private var birthday = Date()
-    @State private var timeOfBirth = Date()
+	@Binding var name: String
+	@Binding var birthday: Date
+	@Binding var timeOfBirth: Date
     @State private var wheelRotation = 0.0
     @State private var contentScale = 0.8
     @State private var buttonPressed = false
@@ -308,9 +402,9 @@ struct UserInfoView: View {
 
 // MARK: - Partner Info View
 struct PartnerInfoView: View {
-    @State private var name = ""
-    @State private var birthday = Date()
-    @State private var timeOfBirth = Date()
+	@Binding var name: String
+	@Binding var birthday: Date
+	@Binding var timeOfBirth: Date
     @State private var wheelRotation = 0.0
     @State private var contentScale = 0.8
     @State private var buttonPressed = false
@@ -321,7 +415,8 @@ struct PartnerInfoView: View {
         case name
     }
     
-    let onBack: () -> Void
+	let onSubmit: () -> Void
+	let onBack: () -> Void
     
     var body: some View {
         ZStack {
@@ -420,10 +515,10 @@ struct PartnerInfoView: View {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                         buttonPressed = true
                     }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        // Handle completion
-                        buttonPressed = false
-                    }
+					DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+						onSubmit()
+						buttonPressed = false
+					}
                 }) {
                     HStack {
                         Text("CONTINUE")
@@ -565,6 +660,22 @@ struct StarShape: Shape {
         path.closeSubpath()
         return path
     }
+}
+
+// MARK: - Helpers
+func combine(date: Date, time: Date) -> Date {
+	var calendar = Calendar.current
+	calendar.timeZone = TimeZone.current
+	let dateComponents = calendar.dateComponents([.year, .month, .day], from: date)
+	let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: time)
+	var merged = DateComponents()
+	merged.year = dateComponents.year
+	merged.month = dateComponents.month
+	merged.day = dateComponents.day
+	merged.hour = timeComponents.hour
+	merged.minute = timeComponents.minute
+	merged.second = timeComponents.second
+	return calendar.date(from: merged) ?? date
 }
 
 // Preview

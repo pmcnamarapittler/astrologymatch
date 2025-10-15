@@ -14,4 +14,11 @@ struct astrologymatchApp: App {
             ContentView()
         }
     }
+    
+    init() {
+        // Suppress haptic feedback warnings in simulator
+        #if targetEnvironment(simulator)
+        UserDefaults.standard.set(false, forKey: "_UIConstraintBasedLayoutLogUnsatisfiable")
+        #endif
+    }
 }
