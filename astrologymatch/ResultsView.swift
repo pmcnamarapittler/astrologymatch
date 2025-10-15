@@ -22,6 +22,7 @@ struct ResultsView: View {
     @State private var starsRotation = 0.0
     @State private var buttonPressed = false
     @State private var showCompatibilityList = false
+    @State private var showPairingsList = false
     
     var body: some View {
         ZStack {
@@ -124,6 +125,30 @@ struct ResultsView: View {
                 .padding(.horizontal, 24)
                 .opacity(contentOpacity)
                 
+                Button(action: {
+                    showPairingsList = true
+                }) {
+                    HStack {
+                        Image(systemName: "person.2")
+                            .font(.system(size: 16, weight: .medium))
+                        Text("View All User Scores")
+                            .font(.system(size: 16, weight: .medium))
+                    }
+                    .foregroundColor(.green)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        Rectangle()
+                            .fill(Color.green.opacity(0.1))
+                            .overlay(
+                                Rectangle()
+                                    .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                            )
+                    )
+                }
+                .padding(.horizontal, 24)
+                .opacity(contentOpacity)
+                
                 Spacer()
                 
                 Button(action: {
@@ -158,6 +183,9 @@ struct ResultsView: View {
         .sheet(isPresented: $showCompatibilityList) {
             let userSign = ZodiacUtils.zodiacSignName(from: userBirthday)
             CompatibilityListView(userSign: userSign)
+        }
+        .sheet(isPresented: $showPairingsList) {
+            PairingsListView()
         }
         .onAppear {
             isAnimating = true
@@ -333,6 +361,169 @@ struct CompatibilityRowView: View {
     }
 }
 
+struct PairingsListView: View {
+    @State private var pairingsData: [SupabaseService.PairingResponse] = []
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+    @Environment(\.presentationMode) var presentationMode
+    
+    var body: some View {
+        ZStack {
+            Color.white.edgesIgnoringSafeArea(.all)
+            
+            VStack {
+                HStack {
+                    Text("All User Pairings")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.black)
+                    
+                    Spacer()
+                    
+                    Button("Done") {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            presentationMode.wrappedValue.dismiss()
+                        }
+                    }
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.blue)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 20)
+                .padding(.bottom, 16)
+                
+                if isLoading {
+                    VStack {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                        Text("Loading user pairings...")
+                            .font(.system(size: 16))
+                            .foregroundColor(.gray)
+                            .padding(.top, 16)
+                    }
+                } else if let error = errorMessage {
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 48))
+                            .foregroundColor(.orange)
+                        Text("Error Loading Data")
+                            .font(.system(size: 24, weight: .bold))
+                        Text(error)
+                            .font(.system(size: 16))
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    }
+                } else {
+                    List {
+                        ForEach(pairingsData, id: \.id) { pairing in
+                            PairingRowView(pairing: pairing)
+                        }
+                    }
+                    .listStyle(PlainListStyle())
+                }
+            }
+        }
+        .onAppear {
+            loadPairingsData()
+        }
+    }
+    
+    private func loadPairingsData() {
+        SupabaseService.shared.getAllPairingsData { result in
+            DispatchQueue.main.async {
+                self.isLoading = false
+                switch result {
+                case .success(let data):
+                    self.pairingsData = data
+                case .failure(let error):
+                    self.errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+}
+
+struct PairingRowView: View {
+    let pairing: SupabaseService.PairingResponse
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("\(pairing.a_name.isEmpty ? "Unknown" : pairing.a_name) & \(pairing.b_name.isEmpty ? "Unknown" : pairing.b_name)")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.black)
+                
+                Spacer()
+                
+                Text("\(pairing.score)%")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(scoreColor(pairing.score))
+            }
+            
+            Text(pairing.insights)
+                .font(.system(size: 14))
+                .foregroundColor(.gray)
+                .lineLimit(2)
+            
+            HStack {
+                Text(formatDate(pairing.a_date))
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray)
+                
+                Text("•")
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray)
+                
+                Text(formatDate(pairing.b_date))
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray)
+                
+                Spacer()
+                
+                Text(formatCreatedAt(pairing.created_at))
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray)
+            }
+        }
+        .padding(.vertical, 8)
+    }
+    
+    private func scoreColor(_ score: Int) -> Color {
+        switch score {
+        case 80...100:
+            return .green
+        case 60...79:
+            return .orange
+        case 40...59:
+            return .yellow
+        default:
+            return .red
+        }
+    }
+    
+    private func formatDate(_ dateString: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'"
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateStyle = .short
+            return displayFormatter.string(from: date)
+        }
+        return dateString
+    }
+    
+    private func formatCreatedAt(_ dateString: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'"
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateStyle = .short
+            displayFormatter.timeStyle = .short
+            return displayFormatter.string(from: date)
+        }
+        return dateString
+    }
+}
 
 struct ResultsView_Previews: PreviewProvider {
     static var previews: some View {

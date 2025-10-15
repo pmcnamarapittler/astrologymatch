@@ -205,6 +205,65 @@ final class SupabaseService {
 			}
 		}.resume()
 	}
+	
+	struct PairingResponse: Decodable, Identifiable {
+		let id: Int
+		let created_at: String
+		let a_name: String
+		let b_name: String
+		let a_date: String
+		let b_date: String
+		let score: Int
+		let insights: String
+	}
+	
+	func getAllPairingsData(completion: @escaping (Result<[PairingResponse], Error>) -> Void) {
+		guard !projectUrl.isEmpty, !anonKey.isEmpty else {
+			completion(.failure(NSError(domain: "SupabaseConfig", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing SUPABASE_URL or SUPABASE_ANON_KEY"])))
+			return
+		}
+		
+		guard let url = URL(string: "\(projectUrl)/rest/v1/\(tableName)?order=created_at.desc") else {
+			completion(.failure(NSError(domain: "URL", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+			return
+		}
+		
+		var request = URLRequest(url: url)
+		request.httpMethod = "GET"
+		request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+		request.setValue("Bearer \(anonKey)", forHTTPHeaderField: "Authorization")
+		request.setValue("\(anonKey)", forHTTPHeaderField: "apikey")
+		
+		URLSession.shared.dataTask(with: request) { data, response, error in
+			if let error = error {
+				completion(.failure(error))
+				return
+			}
+			
+			guard let httpResponse = response as? HTTPURLResponse else {
+				completion(.failure(NSError(domain: "HTTP", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])))
+				return
+			}
+			
+			guard httpResponse.statusCode == 200 else {
+				completion(.failure(NSError(domain: "HTTP", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Request failed with code \(httpResponse.statusCode)"])))
+				return
+			}
+			
+			guard let data = data else {
+				completion(.failure(NSError(domain: "Data", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+				return
+			}
+			
+			do {
+				let decoder = JSONDecoder()
+				let responses = try decoder.decode([PairingResponse].self, from: data)
+				completion(.success(responses))
+			} catch {
+				completion(.failure(error))
+			}
+		}.resume()
+	}
 }
 
 
