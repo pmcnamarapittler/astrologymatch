@@ -26,79 +26,79 @@ struct ResultsView: View {
     
     var body: some View {
         ZStack {
-            // White background
-            Color.white.edgesIgnoringSafeArea(.all)
+            AppColors.backgroundPrimary.edgesIgnoringSafeArea(.all)
             
-            VStack(spacing: 24) {
+            VStack(spacing: Spacing.xl) {
                 Spacer()
-                    .frame(height: 60)
+                    .frame(height: Spacing.huge)
                 
-                VStack(spacing: 8) {
+                VStack(spacing: Spacing.xs) {
                     Text("Compatibility Results")
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(.black)
+                        .font(Typography.displaySmall)
+                        .foregroundColor(AppColors.primaryText)
                         .opacity(contentOpacity)
                     
                     Text("\(userName) & \(partnerName)")
-                        .font(.system(size: 18, weight: .regular))
-                        .foregroundColor(.black)
+                        .font(Typography.bodyLarge)
+                        .foregroundColor(AppColors.primaryText)
                         .opacity(contentOpacity)
                 }
                 
-                VStack(spacing: 16) {
+                VStack(spacing: Spacing.md) {
                     let userSign = ZodiacUtils.zodiacSignName(from: userBirthday)
                     let partnerSign = ZodiacUtils.zodiacSignName(from: partnerBirthday)
                     
                     Text("\(userSign) & \(partnerSign)")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.black)
+                        .font(Typography.bodyMedium)
+                        .foregroundColor(AppColors.primaryText)
                     
                     Text("\(compatibilityData?.score ?? 0)%")
                         .font(.system(size: 64, weight: .bold))
-                        .foregroundColor(.black)
+                        .foregroundColor(AppColors.primaryText)
                     
                     Text(compatibilityLevel())
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.black)
+                        .font(Typography.bodyLarge)
+                        .foregroundColor(AppColors.primaryText)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 32)
+                .padding(.vertical, Spacing.xxl)
                 .background(
                     Rectangle()
-                        .fill(Color.white)
+                        .fill(AppColors.backgroundPrimary)
                         .overlay(
                             Rectangle()
-                                .stroke(Color.black, lineWidth: 1)
+                                .stroke(AppColors.borderDefault, lineWidth: 1)
                         )
                 )
-                .padding(.horizontal, 24)
+                .padding(.horizontal, Spacing.xl)
                 .opacity(contentOpacity)
                 
-                HStack(alignment: .top, spacing: 12) {
+                HStack(alignment: .top, spacing: Spacing.sm) {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 20))
                         .foregroundColor(.orange)
                     
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: Spacing.xxs) {
                         Text("Romantic Compatibility")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.black)
+                            .font(Typography.bodyMedium)
+                            .fontWeight(.bold)
+                            .foregroundColor(AppColors.primaryText)
                         
                         Text(compatibilityData?.blurb ?? "Compatibility data unavailable")
-                            .font(.system(size: 14, weight: .regular))
-                            .foregroundColor(.black)
+                            .font(Typography.bodySmall)
+                            .foregroundColor(AppColors.primaryText)
                             .multilineTextAlignment(.leading)
                     }
                     
                     Spacer()
                 }
-                .padding(.horizontal, 24)
-                .padding(.vertical, 16)
+                .padding(.horizontal, Spacing.xl)
+                .padding(.vertical, Spacing.md)
                 .background(
                     Rectangle()
-                        .fill(Color.gray.opacity(0.1))
+                        .fill(AppColors.secondaryText.opacity(0.1))
                 )
-                .padding(.horizontal, 24)
+                .padding(.horizontal, Spacing.xl)
                 .opacity(contentOpacity)
                 
                 Button(action: {
@@ -106,13 +106,13 @@ struct ResultsView: View {
                 }) {
                     HStack {
                         Image(systemName: "list.bullet")
-                            .font(.system(size: 16, weight: .medium))
+                            .font(Typography.bodyMedium)
                         Text("View All Compatibility Scores")
-                            .font(.system(size: 16, weight: .medium))
+                            .font(Typography.bodyMedium)
                     }
                     .foregroundColor(.blue)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                    .padding(.vertical, Spacing.sm)
                     .background(
                         Rectangle()
                             .fill(Color.blue.opacity(0.1))
@@ -122,7 +122,7 @@ struct ResultsView: View {
                             )
                     )
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, Spacing.xl)
                 .opacity(contentOpacity)
                 
                 Button(action: {
@@ -130,13 +130,13 @@ struct ResultsView: View {
                 }) {
                     HStack {
                         Image(systemName: "person.2")
-                            .font(.system(size: 16, weight: .medium))
+                            .font(Typography.bodyMedium)
                         Text("View All User Scores")
-                            .font(.system(size: 16, weight: .medium))
+                            .font(Typography.bodyMedium)
                     }
                     .foregroundColor(.green)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                    .padding(.vertical, Spacing.sm)
                     .background(
                         Rectangle()
                             .fill(Color.green.opacity(0.1))
@@ -146,37 +146,25 @@ struct ResultsView: View {
                             )
                     )
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, Spacing.xl)
                 .opacity(contentOpacity)
                 
                 Spacer()
                 
                 Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    withAnimation(.spring(response: AnimationDuration.medium, dampingFraction: 0.6)) {
                         buttonPressed = true
                     }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + AnimationDuration.fast) {
                         onStartOver()
                         buttonPressed = false
                     }
                 }) {
                     Text("Start Over")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.black)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                    .background(
-                        Rectangle()
-                            .fill(Color.white)
-                            .overlay(
-                                Rectangle()
-                                    .stroke(Color.black, lineWidth: 1)
-                            )
-                    )
-                        .scaleEffect(buttonPressed ? 0.95 : 1.0)
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 40)
+                .appButtonStyle(.secondary, isPressed: buttonPressed)
+                .padding(.horizontal, Spacing.xl)
+                .padding(.bottom, Spacing.xxxl)
                 .opacity(contentOpacity)
             }
         }
@@ -189,7 +177,7 @@ struct ResultsView: View {
         }
         .onAppear {
             isAnimating = true
-            withAnimation(.easeIn(duration: 1.0)) {
+            withAnimation(.easeIn(duration: AnimationDuration.verySlow)) {
                 contentOpacity = 1.0
             }
             withAnimation(.linear(duration: 15).repeatForever(autoreverses: false)) {
@@ -227,49 +215,49 @@ struct CompatibilityListView: View {
     
     var body: some View {
         ZStack {
-            Color.white.edgesIgnoringSafeArea(.all)
+            AppColors.backgroundPrimary.edgesIgnoringSafeArea(.all)
             
             VStack {
                 HStack {
                     Text("\(userSign) Compatibility")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.black)
+                        .font(Typography.displaySmall)
+                        .foregroundColor(AppColors.primaryText)
                     
                     Spacer()
                     
                     Button("Done") {
-                        withAnimation(.easeInOut(duration: 0.3)) {
+                        withAnimation(.easeInOut(duration: AnimationDuration.medium)) {
                             presentationMode.wrappedValue.dismiss()
                         }
                     }
-                    .font(.system(size: 16, weight: .medium))
+                    .font(Typography.bodyMedium)
                     .foregroundColor(.blue)
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 20)
-                .padding(.bottom, 16)
+                .padding(.horizontal, Spacing.xl)
+                .padding(.top, Spacing.lg)
+                .padding(.bottom, Spacing.md)
                 
                 if isLoading {
                     VStack {
                         ProgressView()
                             .scaleEffect(1.5)
                         Text("Loading compatibility data...")
-                            .font(.system(size: 16))
-                            .foregroundColor(.gray)
-                            .padding(.top, 16)
+                            .font(Typography.bodyMedium)
+                            .foregroundColor(AppColors.secondaryText)
+                            .padding(.top, Spacing.md)
                     }
                 } else if let error = errorMessage {
-                    VStack(spacing: 16) {
+                    VStack(spacing: Spacing.md) {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.system(size: 48))
                             .foregroundColor(.orange)
                         Text("Error Loading Data")
-                            .font(.system(size: 24, weight: .bold))
+                            .font(Typography.displaySmall)
                         Text(error)
-                            .font(.system(size: 16))
-                            .foregroundColor(.gray)
+                            .font(Typography.bodyMedium)
+                            .foregroundColor(AppColors.secondaryText)
                             .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
+                            .padding(.horizontal, Spacing.xxl)
                     }
                 } else {
                     List {
@@ -299,7 +287,7 @@ struct CompatibilityListView: View {
                     self.errorMessage = error.localizedDescription
                 }
             }
-        }   
+        }
     }
 }
 
@@ -308,14 +296,15 @@ struct CompatibilityRowView: View {
     
     var body: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text("\(compatibility.Sign1) & \(compatibility.Sign2)")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.black)
+                    .font(Typography.bodyLarge)
+                    .fontWeight(.semibold)
+                    .foregroundColor(AppColors.primaryText)
                 
                 Text(compatibility.Blurb)
-                    .font(.system(size: 14))
-                    .foregroundColor(.gray)
+                    .font(Typography.bodySmall)
+                    .foregroundColor(AppColors.secondaryText)
                     .lineLimit(2)
             }
             
@@ -323,15 +312,15 @@ struct CompatibilityRowView: View {
             
             VStack {
                 Text("\(compatibility.CompatibilityScore)%")
-                    .font(.system(size: 24, weight: .bold))
+                    .font(Typography.displaySmall)
                     .foregroundColor(scoreColor(compatibility.CompatibilityScore))
                 
                 Text(compatibilityLevel(compatibility.CompatibilityScore))
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.gray)
+                    .font(Typography.labelSmall)
+                    .foregroundColor(AppColors.secondaryText)
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, Spacing.xs)
     }
     
     private func scoreColor(_ score: Int) -> Color {
@@ -369,49 +358,49 @@ struct PairingsListView: View {
     
     var body: some View {
         ZStack {
-            Color.white.edgesIgnoringSafeArea(.all)
+            AppColors.backgroundPrimary.edgesIgnoringSafeArea(.all)
             
             VStack {
                 HStack {
                     Text("All User Pairings")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.black)
+                        .font(Typography.displaySmall)
+                        .foregroundColor(AppColors.primaryText)
                     
                     Spacer()
                     
                     Button("Done") {
-                        withAnimation(.easeInOut(duration: 0.3)) {
+                        withAnimation(.easeInOut(duration: AnimationDuration.medium)) {
                             presentationMode.wrappedValue.dismiss()
                         }
                     }
-                    .font(.system(size: 16, weight: .medium))
+                    .font(Typography.bodyMedium)
                     .foregroundColor(.blue)
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 20)
-                .padding(.bottom, 16)
+                .padding(.horizontal, Spacing.xl)
+                .padding(.top, Spacing.lg)
+                .padding(.bottom, Spacing.md)
                 
                 if isLoading {
                     VStack {
                         ProgressView()
                             .scaleEffect(1.5)
                         Text("Loading user pairings...")
-                            .font(.system(size: 16))
-                            .foregroundColor(.gray)
-                            .padding(.top, 16)
+                            .font(Typography.bodyMedium)
+                            .foregroundColor(AppColors.secondaryText)
+                            .padding(.top, Spacing.md)
                     }
                 } else if let error = errorMessage {
-                    VStack(spacing: 16) {
+                    VStack(spacing: Spacing.md) {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.system(size: 48))
                             .foregroundColor(.orange)
                         Text("Error Loading Data")
-                            .font(.system(size: 24, weight: .bold))
+                            .font(Typography.displaySmall)
                         Text(error)
-                            .font(.system(size: 16))
-                            .foregroundColor(.gray)
+                            .font(Typography.bodyMedium)
+                            .foregroundColor(AppColors.secondaryText)
                             .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
+                            .padding(.horizontal, Spacing.xxl)
                     }
                 } else {
                     List {
@@ -447,45 +436,46 @@ struct PairingRowView: View {
     let pairing: SupabaseService.PairingResponse
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
             HStack {
                 Text("\(pairing.a_name.isEmpty ? "Unknown" : pairing.a_name) & \(pairing.b_name.isEmpty ? "Unknown" : pairing.b_name)")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.black)
+                    .font(Typography.bodyLarge)
+                    .fontWeight(.semibold)
+                    .foregroundColor(AppColors.primaryText)
                 
                 Spacer()
                 
                 Text("\(pairing.score)%")
-                    .font(.system(size: 24, weight: .bold))
+                    .font(Typography.displaySmall)
                     .foregroundColor(scoreColor(pairing.score))
             }
             
             Text(pairing.insights)
-                .font(.system(size: 14))
-                .foregroundColor(.gray)
+                .font(Typography.bodySmall)
+                .foregroundColor(AppColors.secondaryText)
                 .lineLimit(2)
             
             HStack {
                 Text(formatDate(pairing.a_date))
-                    .font(.system(size: 12))
-                    .foregroundColor(.gray)
+                    .font(Typography.labelSmall)
+                    .foregroundColor(AppColors.secondaryText)
                 
                 Text("•")
-                    .font(.system(size: 12))
-                    .foregroundColor(.gray)
+                    .font(Typography.labelSmall)
+                    .foregroundColor(AppColors.secondaryText)
                 
                 Text(formatDate(pairing.b_date))
-                    .font(.system(size: 12))
-                    .foregroundColor(.gray)
+                    .font(Typography.labelSmall)
+                    .foregroundColor(AppColors.secondaryText)
                 
                 Spacer()
                 
                 Text(formatCreatedAt(pairing.created_at))
-                    .font(.system(size: 12))
-                    .foregroundColor(.gray)
+                    .font(Typography.labelSmall)
+                    .foregroundColor(AppColors.secondaryText)
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, Spacing.xs)
     }
     
     private func scoreColor(_ score: Int) -> Color {
