@@ -7,6 +7,233 @@
 
 import SwiftUI
 
+// MARK: - Design System
+
+// MARK: - Colors
+enum AppColors {
+    static let primaryText = Color.black
+    static let secondaryText = Color.gray
+    static let tertiaryText = Color.gray.opacity(0.6)
+    static let backgroundPrimary = Color.white
+    static let backgroundGradientTop = Color(red: 0.2, green: 0.2, blue: 0.25)
+    static let backgroundGradientMiddle = Color(red: 0.15, green: 0.15, blue: 0.2)
+    static let starWhite = Color.white
+    static let moonGlow = Color.white.opacity(0.5)
+    static let sunYellow = Color.yellow.opacity(0.3)
+    static let sunOrange = Color.orange.opacity(0.6)
+    static let dividerDefault = Color.gray.opacity(0.3)
+    static let dividerFocused = Color.black
+    static let borderDefault = Color.black
+    static let overlayLight = Color.white.opacity(0.9)
+}
+
+// MARK: - Spacing
+enum Spacing {
+    static let xxs: CGFloat = 4
+    static let xs: CGFloat = 8
+    static let sm: CGFloat = 12
+    static let md: CGFloat = 16
+    static let lg: CGFloat = 20
+    static let xl: CGFloat = 24
+    static let xxl: CGFloat = 32
+    static let xxxl: CGFloat = 40
+    static let huge: CGFloat = 60
+    static let sectionSmall: CGFloat = 16
+    static let sectionMedium: CGFloat = 24
+    static let sectionLarge: CGFloat = 32
+}
+
+// MARK: - Typography
+enum Typography {
+    static let displayLarge = Font.system(size: 48, weight: .light, design: .serif)
+    static let displayMedium = Font.system(size: 36, weight: .light, design: .serif)
+    static let displaySmall = Font.system(size: 32, weight: .light, design: .serif)
+    static let bodyLarge = Font.system(size: 18, weight: .regular)
+    static let bodyMedium = Font.system(size: 16, weight: .regular)
+    static let bodySmall = Font.system(size: 14, weight: .regular)
+    static let labelLarge = Font.system(size: 14, weight: .medium)
+    static let labelMedium = Font.system(size: 12, weight: .medium)
+    static let labelSmall = Font.system(size: 12, weight: .regular)
+    static let buttonPrimary = Font.system(size: 14, weight: .medium)
+    static let buttonSecondary = Font.system(size: 16, weight: .regular)
+    static let zodiacSymbol = Font.system(size: 20)
+}
+
+// MARK: - Sizing
+enum Sizing {
+    static let iconSmall: CGFloat = 60
+    static let iconMedium: CGFloat = 80
+    static let iconLarge: CGFloat = 120
+    static let wheelSmall: CGFloat = 200
+    static let wheelMedium: CGFloat = 250
+    static let wheelLarge: CGFloat = 300
+    static let buttonHeightSmall: CGFloat = 44
+    static let buttonHeightMedium: CGFloat = 48
+    static let buttonHeightLarge: CGFloat = 56
+}
+
+// MARK: - Animation Durations
+enum AnimationDuration {
+    static let fast: Double = 0.2
+    static let medium: Double = 0.3
+    static let slow: Double = 0.5
+    static let verySlow: Double = 1.0
+    static let fadeIn: Double = 1.0
+    static let wheelRotation: Double = 30.0
+    static let moonRotation: Double = 20.0
+}
+
+// MARK: - Shadow Styles
+enum ShadowStyle {
+    case soft, medium, strong, glow
+    
+    var color: Color {
+        switch self {
+        case .soft: return Color.black.opacity(0.1)
+        case .medium: return Color.black.opacity(0.2)
+        case .strong: return Color.black.opacity(0.3)
+        case .glow: return Color.white.opacity(0.5)
+        }
+    }
+    
+    var radius: CGFloat {
+        switch self {
+        case .soft: return 4
+        case .medium: return 8
+        case .strong: return 12
+        case .glow: return 20
+        }
+    }
+}
+
+// MARK: - View Modifiers
+struct AppButtonStyle: ViewModifier {
+    enum Style { case primary, secondary }
+    let style: Style
+    let isPressed: Bool
+    
+    func body(content: Content) -> some View {
+        content
+            .font(Typography.buttonPrimary)
+            .foregroundColor(style == .primary ? .white : AppColors.primaryText)
+            .frame(maxWidth: .infinity)
+            .frame(height: Sizing.buttonHeightSmall)
+            .background(style == .primary ? AppColors.primaryText : Color.clear)
+            .overlay(
+                RoundedRectangle(cornerRadius: 0)
+                    .stroke(style == .secondary ? AppColors.borderDefault : Color.clear, lineWidth: 1)
+            )
+            .scaleEffect(isPressed ? 0.95 : 1.0)
+    }
+}
+
+struct FormFieldStyle: ViewModifier {
+    let label: String
+    let isFocused: Bool
+    
+    func body(content: Content) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text(label)
+                .font(Typography.labelSmall)
+                .foregroundColor(AppColors.secondaryText)
+            content
+                .font(Typography.bodyMedium)
+                .padding(.bottom, Spacing.xxs)
+            Divider()
+                .background(isFocused ? AppColors.dividerFocused : AppColors.dividerDefault)
+        }
+    }
+}
+
+struct AppNavigationBarStyle: ViewModifier {
+    let title: String
+    let onBack: (() -> Void)?
+    @State private var backButtonPressed = false
+    
+    func body(content: Content) -> some View {
+        VStack(spacing: 0) {
+            ZStack {
+                Text(title)
+                    .font(Typography.displaySmall)
+                    .foregroundColor(AppColors.primaryText)
+                
+                if let onBack = onBack {
+                    HStack {
+                        Button(action: {
+                            withAnimation(.spring(response: AnimationDuration.medium, dampingFraction: 0.6)) {
+                                backButtonPressed = true
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + AnimationDuration.fast) {
+                                onBack()
+                                backButtonPressed = false
+                            }
+                        }) {
+                            HStack(spacing: Spacing.xxs) {
+                                Image(systemName: "chevron.left")
+                                    .font(Typography.bodyMedium.weight(.medium))
+                                Text("Back")
+                                    .font(Typography.bodyMedium)
+                            }
+                            .foregroundColor(AppColors.primaryText)
+                            .scaleEffect(backButtonPressed ? 0.9 : 1.0)
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal, Spacing.xl)
+                }
+            }
+            .frame(height: Sizing.buttonHeightLarge)
+            .padding(.top, Spacing.xxxl)
+            content
+        }
+    }
+}
+
+// MARK: - View Extensions
+extension View {
+    func appButtonStyle(_ style: AppButtonStyle.Style, isPressed: Bool = false) -> some View {
+        self.modifier(AppButtonStyle(style: style, isPressed: isPressed))
+    }
+    
+    func formFieldStyle(label: String, isFocused: Bool = false) -> some View {
+        self.modifier(FormFieldStyle(label: label, isFocused: isFocused))
+    }
+    
+    func appNavigationBar(title: String, onBack: (() -> Void)? = nil) -> some View {
+        self.modifier(AppNavigationBarStyle(title: title, onBack: onBack))
+    }
+    
+    func cardShadow(_ style: ShadowStyle = .soft) -> some View {
+        self.shadow(color: style.color, radius: style.radius)
+    }
+}
+
+// MARK: - Gradient Extensions
+extension LinearGradient {
+    static var appBackground: LinearGradient {
+        LinearGradient(
+            gradient: Gradient(colors: [
+                AppColors.backgroundGradientTop,
+                AppColors.backgroundGradientMiddle,
+                AppColors.backgroundPrimary
+            ]),
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+}
+
+extension RadialGradient {
+    static var sunGlow: RadialGradient {
+        RadialGradient(
+            gradient: Gradient(colors: [AppColors.sunYellow, AppColors.backgroundPrimary]),
+            center: .center,
+            startRadius: 0,
+            endRadius: 30
+        )
+    }
+}
+
 // MARK: - Main App Structure
 struct ContentView: View {
     @State private var currentScreen = 0
@@ -27,10 +254,10 @@ struct ContentView: View {
             })
             .tag(0)
             
-			UserInfoView(
-				name: $userName,
-				birthday: $userBirthday,
-				timeOfBirth: $userTimeOfBirth,
+            UserInfoView(
+                name: $userName,
+                birthday: $userBirthday,
+                timeOfBirth: $userTimeOfBirth,
                 onContinue: {
                     withAnimation(.easeInOut(duration: 0.5)) {
                         currentScreen = 2
@@ -49,14 +276,13 @@ struct ContentView: View {
                 birthday: $partnerBirthday,
                 timeOfBirth: $partnerTimeOfBirth,
                 onSubmit: {
-                    // Fetch compatibility data before proceeding
                     fetchCompatibilityData()
                 },
                 onBack: {
-                withAnimation(.easeInOut(duration: 0.5)) {
-                    currentScreen = 1
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        currentScreen = 1
+                    }
                 }
-            }
             )
             .tag(2)
             
@@ -71,7 +297,6 @@ struct ContentView: View {
                 onStartOver: {
                     withAnimation(.easeInOut(duration: 0.5)) {
                         currentScreen = 0
-                        // Reset all form data
                         userName = ""
                         userBirthday = Date()
                         userTimeOfBirth = Date()
@@ -97,14 +322,11 @@ struct ContentView: View {
                 switch result {
                 case .success(let compatibility):
                     self.compatibilityData = compatibility
-                    // Store the pairing data with compatibility results
                     self.storePairingData(compatibility: compatibility)
-                    // Navigate to results screen
                     withAnimation(.easeInOut(duration: 0.5)) {
                         self.currentScreen = 3
                     }
                 case .failure(_):
-                    // Set fallback data
                     let fallbackCompatibility = SupabaseService.CompatibilityResponse(
                         Sign1: userSign,
                         Sign2: partnerSign,
@@ -112,9 +334,7 @@ struct ContentView: View {
                         Blurb: "Unable to load detailed compatibility data. Your signs show good potential for connection."
                     )
                     self.compatibilityData = fallbackCompatibility
-                    // Store the pairing data with fallback compatibility
                     self.storePairingData(compatibility: fallbackCompatibility)
-                    // Navigate to results screen
                     withAnimation(.easeInOut(duration: 0.5)) {
                         self.currentScreen = 3
                     }
@@ -150,95 +370,54 @@ struct LandingView: View {
     
     var body: some View {
         ZStack {
-            // Background Gradient
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 0.2, green: 0.2, blue: 0.25),
-                    Color(red: 0.15, green: 0.15, blue: 0.2),
-                    Color.white
-                ]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .edgesIgnoringSafeArea(.all)
+            LinearGradient.appBackground.edgesIgnoringSafeArea(.all)
+            StarfieldView(isAnimating: isAnimating)
             
-            // Animated Twinkling Stars
-            GeometryReader { geometry in
-                ForEach(0..<20, id: \.self) { i in
-                    StarShape()
-                        .fill(Color.white)
-                        .frame(width: CGFloat.random(in: 2...6), height: CGFloat.random(in: 2...6))
-                        .opacity(isAnimating ? Double.random(in: 0.3...1.0) : 0.6)
-                        .position(
-                            x: CGFloat.random(in: 0...geometry.size.width),
-                            y: CGFloat.random(in: 50...geometry.size.height * 0.5)
-                        )
-                        .animation(
-                            Animation.easeInOut(duration: Double.random(in: 1...2))
-                                .repeatForever(autoreverses: true)
-                                .delay(Double.random(in: 0...1)),
-                            value: isAnimating
-                        )
-                }
-            }
-            
-            VStack(spacing: 16) {
-                Spacer()
-                    .frame(height: 100)
+            VStack(spacing: Spacing.sectionMedium) {
+                Spacer().frame(height: Spacing.huge + Spacing.xxxl)
                 
-                // Animated Moon Icon
                 AnimatedCrescentMoonView(rotation: moonRotation)
-                    .frame(width: 80, height: 80)
+                    .frame(width: Sizing.iconMedium, height: Sizing.iconMedium)
                     .scaleEffect(contentOpacity)
                 
-                Spacer()
-                    .frame(height: 30)
+                Spacer().frame(height: Spacing.xxl)
                 
-                // Title with fade-in
                 Text("Astrology Match")
-                    .font(.system(size: 48, weight: .light, design: .serif))
-                    .foregroundColor(.white)
+                    .font(Typography.displayLarge)
+                    .foregroundColor(AppColors.starWhite)
                     .multilineTextAlignment(.center)
                     .opacity(contentOpacity)
                 
-                // Subtitle with fade-in
                 Text("The Social Astrology App")
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundColor(.white.opacity(0.9))
+                    .font(Typography.bodyMedium)
+                    .foregroundColor(AppColors.overlayLight)
                     .opacity(contentOpacity)
                 
                 Spacer()
                 
-                // Get Started Button with press animation
                 Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    withAnimation(.spring(response: AnimationDuration.medium, dampingFraction: 0.6)) {
                         buttonPressed = true
                     }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + AnimationDuration.fast) {
                         onGetStarted()
                         buttonPressed = false
                     }
                 }) {
                     Text("GET STARTED")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.black)
-                        .scaleEffect(buttonPressed ? 0.95 : 1.0)
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 40)
+                .appButtonStyle(.primary, isPressed: buttonPressed)
+                .padding(.horizontal, Spacing.xl)
+                .padding(.bottom, Spacing.xxxl)
                 .opacity(contentOpacity)
             }
         }
         .onAppear {
-            // Start animations
             isAnimating = true
-            withAnimation(.easeIn(duration: 1.0)) {
+            withAnimation(.easeIn(duration: AnimationDuration.verySlow)) {
                 contentOpacity = 1.0
             }
-            withAnimation(.linear(duration: 20).repeatForever(autoreverses: false)) {
+            withAnimation(.linear(duration: AnimationDuration.moonRotation).repeatForever(autoreverses: false)) {
                 moonRotation = 360
             }
         }
@@ -247,153 +426,110 @@ struct LandingView: View {
 
 // MARK: - User Info View
 struct UserInfoView: View {
-	@Binding var name: String
-	@Binding var birthday: Date
-	@Binding var timeOfBirth: Date
+    @Binding var name: String
+    @Binding var birthday: Date
+    @Binding var timeOfBirth: Date
     @State private var wheelRotation = 0.0
     @State private var contentScale = 0.8
     @State private var buttonPressed = false
-    @State private var backButtonPressed = false
-    @FocusState private var focusedField: Field?
-    @Environment(\.presentationMode) var presentationMode
-    
-    enum Field {
-        case name
-    }
-    
+    @FocusState private var isNameFocused: Bool
     let onContinue: () -> Void
     let onBack: () -> Void
     
     var body: some View {
         ZStack {
-            Color.white.edgesIgnoringSafeArea(.all)
+            AppColors.backgroundPrimary.edgesIgnoringSafeArea(.all)
             
-            VStack(spacing: 24) {
-                // Title at top with back button
-                ZStack {
-                    Text("Astrology Match")
-                        .font(.system(size: 32, weight: .light, design: .serif))
-                        .foregroundColor(.black)
-                    
-                    HStack {
-                        Button(action: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                                backButtonPressed = true
-                            }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                onBack()
-                                backButtonPressed = false
-                            }
-                        }) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 16, weight: .medium))
-                                Text("Back")
-                                    .font(.system(size: 16, weight: .regular))
-                            }
-                            .foregroundColor(.black)
-                            .scaleEffect(backButtonPressed ? 0.9 : 1.0)
+            VStack(spacing: 0) {
+                // Back button in upper left
+                HStack {
+                    Button(action: onBack) {
+                        HStack(spacing: Spacing.xxs) {
+                            Image(systemName: "chevron.left")
+                                .font(Typography.bodyMedium.weight(.medium))
+                            Text("Back")
+                                .font(Typography.bodyMedium)
                         }
-                        Spacer()
+                        .foregroundColor(AppColors.primaryText)
                     }
-                    .padding(.horizontal, 24)
+                    Spacer()
                 }
-                .padding(.top, 40)
+                .padding(.horizontal, Spacing.xl)
+                .padding(.top, Spacing.xxxl)
+                .frame(height: Sizing.buttonHeightLarge)
                 
-                // Content Section
-                VStack(spacing: 16) {
-                    Text("Lets get to know you.")
-                        .font(.system(size: 32, weight: .light, design: .serif))
-                        .foregroundColor(.black)
+                Spacer()
+                    .frame(height: Spacing.xxl)
+                
+                VStack(spacing: Spacing.md) {
+                    Text("Let's get to know you.")
+                        .font(Typography.displaySmall)
+                        .foregroundColor(AppColors.primaryText)
                         .multilineTextAlignment(.center)
-                    
-                    Text("Just tell us your birthday and the exact time you were born.")
-                        .font(.system(size: 14))
-                        .foregroundColor(.gray)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
+                
                 }
                 .scaleEffect(contentScale)
                 
-                // Animated Astrology Wheel
                 AstrologyWheelView(rotation: wheelRotation)
-                    .frame(width: 250, height: 250)
-                    .padding(.vertical, 20)
+                    .frame(width: Sizing.wheelMedium, height: Sizing.wheelMedium)
+                    .padding(.vertical, Spacing.lg)
                     .scaleEffect(contentScale)
                 
-                // Form Fields
-                VStack(alignment: .leading, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Your Name")
-                            .font(.system(size: 12))
-                            .foregroundColor(.gray)
-                        TextField("Name", text: $name)
-                            .font(.system(size: 16))
-                            .padding(.bottom, 4)
-                            .focused($focusedField, equals: .name)
-                        Divider()
-                            .background(focusedField == .name ? Color.black : Color.gray.opacity(0.3))
-                    }
+                VStack(alignment: .leading, spacing: Spacing.lg) {
+                    TextField("Name", text: $name)
+                        .focused($isNameFocused)
+                        .formFieldStyle(label: "Your Name", isFocused: isNameFocused)
                     
-                    HStack(spacing: 20) {
-                        VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: Spacing.lg) {
+                        VStack(alignment: .leading, spacing: Spacing.xs) {
                             Text("Birthday")
-                                .font(.system(size: 12))
-                                .foregroundColor(.gray)
+                                .font(Typography.labelSmall)
+                                .foregroundColor(AppColors.secondaryText)
                             DatePicker("", selection: $birthday, displayedComponents: .date)
                                 .labelsHidden()
                                 .datePickerStyle(.compact)
                         }
                         
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: Spacing.xs) {
                             Text("Time of birth")
-                                .font(.system(size: 12))
-                                .foregroundColor(.gray)
+                                .font(Typography.labelSmall)
+                                .foregroundColor(AppColors.secondaryText)
                             DatePicker("", selection: $timeOfBirth, displayedComponents: .hourAndMinute)
                                 .labelsHidden()
                                 .datePickerStyle(.compact)
                         }
                     }
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, Spacing.xl)
                 .scaleEffect(contentScale)
                 
                 Spacer()
                 
-                // Continue Button
                 Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    withAnimation(.spring(response: AnimationDuration.medium, dampingFraction: 0.6)) {
                         buttonPressed = true
                     }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + AnimationDuration.fast) {
                         onContinue()
                         buttonPressed = false
                     }
                 }) {
-                    HStack {
+                    HStack(spacing: Spacing.xs) {
                         Text("CONTINUE")
-                            .font(.system(size: 14, weight: .medium))
                         Image(systemName: "arrow.right")
                     }
-                    .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 0)
-                            .stroke(Color.black, lineWidth: 1)
-                    )
-                    .scaleEffect(buttonPressed ? 0.95 : 1.0)
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 40)
+                .appButtonStyle(.secondary, isPressed: buttonPressed)
+                .padding(.horizontal, Spacing.xl)
+                .padding(.bottom, Spacing.xxxl)
                 .scaleEffect(contentScale)
             }
         }
         .onAppear {
-            withAnimation(.easeOut(duration: 0.6)) {
+            withAnimation(.easeOut(duration: AnimationDuration.slow)) {
                 contentScale = 1.0
             }
-            withAnimation(.linear(duration: 30).repeatForever(autoreverses: false)) {
+            withAnimation(.linear(duration: AnimationDuration.wheelRotation).repeatForever(autoreverses: false)) {
                 wheelRotation = 360
             }
         }
@@ -402,227 +538,190 @@ struct UserInfoView: View {
 
 // MARK: - Partner Info View
 struct PartnerInfoView: View {
-	@Binding var name: String
-	@Binding var birthday: Date
-	@Binding var timeOfBirth: Date
+    @Binding var name: String
+    @Binding var birthday: Date
+    @Binding var timeOfBirth: Date
     @State private var wheelRotation = 0.0
     @State private var contentScale = 0.8
     @State private var buttonPressed = false
-    @State private var backButtonPressed = false
-    @FocusState private var focusedField: Field?
-    
-    enum Field {
-        case name
-    }
-    
-	let onSubmit: () -> Void
-	let onBack: () -> Void
+    @FocusState private var isNameFocused: Bool
+    let onSubmit: () -> Void
+    let onBack: () -> Void
     
     var body: some View {
         ZStack {
-            Color.white.edgesIgnoringSafeArea(.all)
+            AppColors.backgroundPrimary.edgesIgnoringSafeArea(.all)
             
-            VStack(spacing: 24) {
-                // Title at top with back button
-                ZStack {
-                    Text("Astrology Match")
-                        .font(.system(size: 32, weight: .light, design: .serif))
-                        .foregroundColor(.black)
-                    
-                    HStack {
-                        Button(action: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                                backButtonPressed = true
-                            }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                onBack()
-                                backButtonPressed = false
-                            }
-                        }) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 16, weight: .medium))
-                                Text("Back")
-                                    .font(.system(size: 16, weight: .regular))
-                            }
-                            .foregroundColor(.black)
-                            .scaleEffect(backButtonPressed ? 0.9 : 1.0)
+            VStack(spacing: 0) {
+                // Back button in upper left
+                HStack {
+                    Button(action: onBack) {
+                        HStack(spacing: Spacing.xxs) {
+                            Image(systemName: "chevron.left")
+                                .font(Typography.bodyMedium.weight(.medium))
+                            Text("Back")
+                                .font(Typography.bodyMedium)
                         }
-                        Spacer()
+                        .foregroundColor(AppColors.primaryText)
                     }
-                    .padding(.horizontal, 24)
+                    Spacer()
                 }
-                .padding(.top, 40)
+                .padding(.horizontal, Spacing.xl)
+                .padding(.top, Spacing.xxxl)
+                .frame(height: Sizing.buttonHeightLarge)
                 
-                VStack(spacing: 16) {
+                Spacer()
+                    .frame(height: Spacing.xxl)
+                
+                VStack(spacing: Spacing.md) {
                     Text("Now tell us about them.")
-                        .font(.system(size: 32, weight: .light, design: .serif))
-                        .foregroundColor(.black)
+                        .font(Typography.displaySmall)
+                        .foregroundColor(AppColors.primaryText)
                         .multilineTextAlignment(.center)
                     
-                    Text("Just tell us their birthday and the exact time they were born.")
-                        .font(.system(size: 14))
-                        .foregroundColor(.gray)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
                 }
                 .scaleEffect(contentScale)
                 
                 AstrologyWheelView(rotation: wheelRotation)
-                    .frame(width: 250, height: 250)
-                    .padding(.vertical, 20)
+                    .frame(width: Sizing.wheelMedium, height: Sizing.wheelMedium)
+                    .padding(.vertical, Spacing.lg)
                     .scaleEffect(contentScale)
                 
-                VStack(alignment: .leading, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Their Name")
-                            .font(.system(size: 12))
-                            .foregroundColor(.gray)
-                        TextField("Name", text: $name)
-                            .font(.system(size: 16))
-                            .padding(.bottom, 4)
-                            .focused($focusedField, equals: .name)
-                        Divider()
-                            .background(focusedField == .name ? Color.black : Color.gray.opacity(0.3))
-                    }
+                VStack(alignment: .leading, spacing: Spacing.lg) {
+                    TextField("Name", text: $name)
+                        .focused($isNameFocused)
+                        .formFieldStyle(label: "Their Name", isFocused: isNameFocused)
                     
-                    HStack(spacing: 20) {
-                        VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: Spacing.lg) {
+                        VStack(alignment: .leading, spacing: Spacing.xs) {
                             Text("Birthday")
-                                .font(.system(size: 12))
-                                .foregroundColor(.gray)
+                                .font(Typography.labelSmall)
+                                .foregroundColor(AppColors.secondaryText)
                             DatePicker("", selection: $birthday, displayedComponents: .date)
                                 .labelsHidden()
                                 .datePickerStyle(.compact)
                         }
                         
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: Spacing.xs) {
                             Text("Time of birth")
-                                .font(.system(size: 12))
-                                .foregroundColor(.gray)
+                                .font(Typography.labelSmall)
+                                .foregroundColor(AppColors.secondaryText)
                             DatePicker("", selection: $timeOfBirth, displayedComponents: .hourAndMinute)
                                 .labelsHidden()
                                 .datePickerStyle(.compact)
                         }
                     }
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, Spacing.xl)
                 .scaleEffect(contentScale)
                 
                 Spacer()
                 
                 Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    withAnimation(.spring(response: AnimationDuration.medium, dampingFraction: 0.6)) {
                         buttonPressed = true
                     }
-					DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-						onSubmit()
-						buttonPressed = false
-					}
+                    DispatchQueue.main.asyncAfter(deadline: .now() + AnimationDuration.fast) {
+                        onSubmit()
+                        buttonPressed = false
+                    }
                 }) {
-                    HStack {
+                    HStack(spacing: Spacing.xs) {
                         Text("CONTINUE")
-                            .font(.system(size: 14, weight: .medium))
                         Image(systemName: "arrow.right")
                     }
-                    .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 0)
-                            .stroke(Color.black, lineWidth: 1)
-                    )
-                    .scaleEffect(buttonPressed ? 0.95 : 1.0)
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 40)
+                .appButtonStyle(.secondary, isPressed: buttonPressed)
+                .padding(.horizontal, Spacing.xl)
+                .padding(.bottom, Spacing.xxxl)
                 .scaleEffect(contentScale)
             }
         }
         .onAppear {
-            withAnimation(.easeOut(duration: 0.6)) {
+            withAnimation(.easeOut(duration: AnimationDuration.slow)) {
                 contentScale = 1.0
             }
-            withAnimation(.linear(duration: 30).repeatForever(autoreverses: false)) {
+            withAnimation(.linear(duration: AnimationDuration.wheelRotation).repeatForever(autoreverses: false)) {
                 wheelRotation = 360
             }
         }
     }
 }
 
-// MARK: - Animated Astrology Wheel
+// MARK: - Component Views
+struct StarfieldView: View {
+    let isAnimating: Bool
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ForEach(0..<20, id: \.self) { i in
+                StarShape()
+                    .fill(AppColors.starWhite)
+                    .frame(width: CGFloat.random(in: 2...6), height: CGFloat.random(in: 2...6))
+                    .opacity(isAnimating ? Double.random(in: 0.3...1.0) : 0.6)
+                    .position(
+                        x: CGFloat.random(in: 0...geometry.size.width),
+                        y: CGFloat.random(in: 50...geometry.size.height * 0.5)
+                    )
+                    .animation(
+                        Animation.easeInOut(duration: Double.random(in: 1...2))
+                            .repeatForever(autoreverses: true)
+                            .delay(Double.random(in: 0...1)),
+                        value: isAnimating
+                    )
+            }
+        }
+    }
+}
+
 struct AstrologyWheelView: View {
     let rotation: Double
     let zodiacSymbols = ["♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓"]
     
     var body: some View {
         ZStack {
-            // Outer circle
-            Circle()
-                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-            
-            // 12 division lines
+            Circle().stroke(AppColors.dividerDefault, lineWidth: 1)
             ForEach(0..<12) { i in
                 Rectangle()
-                    .fill(Color.gray.opacity(0.3))
+                    .fill(AppColors.dividerDefault)
                     .frame(width: 1, height: 125)
                     .rotationEffect(.degrees(Double(i) * 30))
             }
-            
-            // Zodiac symbols on the outer ring
             ForEach(0..<12) { i in
                 Text(zodiacSymbols[i])
-                    .font(.system(size: 20))
-                    .foregroundColor(.gray.opacity(0.6))
+                    .font(Typography.zodiacSymbol)
+                    .foregroundColor(AppColors.tertiaryText)
                     .offset(y: -95)
                     .rotationEffect(.degrees(Double(i) * 30))
                     .rotationEffect(.degrees(-rotation))
             }
             .rotationEffect(.degrees(rotation))
-            
-            // Inner sun circle
             Circle()
-                .fill(
-                    RadialGradient(
-                        gradient: Gradient(colors: [Color.yellow.opacity(0.3), Color.white]),
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 30
-                    )
-                )
-                .frame(width: 60, height: 60)
+                .fill(RadialGradient.sunGlow)
+                .frame(width: Sizing.iconSmall, height: Sizing.iconSmall)
                 .overlay(
                     ZStack {
-                        // Sun rays as dots
                         ForEach(0..<12) { i in
                             Circle()
-                                .fill(Color.orange.opacity(0.6))
+                                .fill(AppColors.sunOrange)
                                 .frame(width: 3, height: 3)
                                 .offset(y: -25)
                                 .rotationEffect(.degrees(Double(i) * 30 + rotation))
                         }
                     }
                 )
-                .shadow(color: .yellow.opacity(0.3), radius: 10)
+                .cardShadow(.glow)
         }
     }
 }
 
-// MARK: - Animated Crescent Moon
 struct AnimatedCrescentMoonView: View {
     let rotation: Double
     
     var body: some View {
         ZStack {
-            Circle()
-                .fill(Color.white)
-                .shadow(color: .white.opacity(0.5), radius: 20)
-            
-            Circle()
-                .fill(Color(red: 0.2, green: 0.2, blue: 0.25))
-                .offset(x: 15)
-            
-            // Animated rays around the moon
+            Circle().fill(AppColors.starWhite).cardShadow(.glow)
+            Circle().fill(AppColors.backgroundGradientTop).offset(x: 15)
             ForEach(0..<16) { i in
                 Rectangle()
                     .fill(Color.white.opacity(0.6))
@@ -634,7 +733,6 @@ struct AnimatedCrescentMoonView: View {
     }
 }
 
-// MARK: - Custom Star Shape
 struct StarShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -642,43 +740,37 @@ struct StarShape: Shape {
         let outerRadius = min(rect.width, rect.height) / 2
         let innerRadius = outerRadius * 0.4
         let angle = CGFloat.pi / 4
-        
         for i in 0..<8 {
             let isOuter = i % 2 == 0
             let radius = isOuter ? outerRadius : innerRadius
             let currentAngle = angle * CGFloat(i) - CGFloat.pi / 2
-            
             let x = center.x + radius * cos(currentAngle)
             let y = center.y + radius * sin(currentAngle)
-            
-            if i == 0 {
-                path.move(to: CGPoint(x: x, y: y))
-            } else {
-                path.addLine(to: CGPoint(x: x, y: y))
-            }
+            if i == 0 { path.move(to: CGPoint(x: x, y: y)) }
+            else { path.addLine(to: CGPoint(x: x, y: y)) }
         }
         path.closeSubpath()
         return path
     }
 }
 
-// MARK: - Helpers
+// MARK: - Helper Functions
 func combine(date: Date, time: Date) -> Date {
-	var calendar = Calendar.current
-	calendar.timeZone = TimeZone.current
-	let dateComponents = calendar.dateComponents([.year, .month, .day], from: date)
-	let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: time)
-	var merged = DateComponents()
-	merged.year = dateComponents.year
-	merged.month = dateComponents.month
-	merged.day = dateComponents.day
-	merged.hour = timeComponents.hour
-	merged.minute = timeComponents.minute
-	merged.second = timeComponents.second
-	return calendar.date(from: merged) ?? date
+    var calendar = Calendar.current
+    calendar.timeZone = TimeZone.current
+    let dateComponents = calendar.dateComponents([.year, .month, .day], from: date)
+    let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: time)
+    var merged = DateComponents()
+    merged.year = dateComponents.year
+    merged.month = dateComponents.month
+    merged.day = dateComponents.day
+    merged.hour = timeComponents.hour
+    merged.minute = timeComponents.minute
+    merged.second = timeComponents.second
+    return calendar.date(from: merged) ?? date
 }
 
-// Preview
+// MARK: - Preview
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
