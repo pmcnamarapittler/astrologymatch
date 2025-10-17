@@ -2,8 +2,8 @@ import Foundation
 
 final class SupabaseService {
 	static let shared = SupabaseService()
-	private let projectUrl = ProcessInfo.processInfo.environment["SUPABASE_URL"] ?? ""
-	private let anonKey = ProcessInfo.processInfo.environment["SUPABASE_ANON_KEY"] ?? ""
+	private let projectUrl = Keys.supabaseURL
+	private let anonKey = Keys.supabaseAnonKey
 	private let tableName = "pairings"
 
 	private lazy var jsonEncoder: JSONEncoder = {
@@ -37,7 +37,7 @@ final class SupabaseService {
 
 	func createPairing(aName: String, aDate: Date, bName: String, bDate: Date, compatibilityScore: Int, insights: String, completion: @escaping (Result<Void, Error>) -> Void) {
 		guard !projectUrl.isEmpty, !anonKey.isEmpty, let url = URL(string: "\(projectUrl)/rest/v1/\(tableName)") else {
-			completion(.failure(NSError(domain: "SupabaseConfig", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing SUPABASE_URL or SUPABASE_ANON_KEY"])))
+			completion(.failure(NSError(domain: "SupabaseConfig", code: -1, userInfo: [NSLocalizedDescriptionKey: "Database configuration missing. Please check Keys.swift file."])))
 			return
 		}
 
@@ -72,7 +72,7 @@ final class SupabaseService {
 	
 	func getCompatibility(sign1: String, sign2: String, completion: @escaping (Result<CompatibilityResponse, Error>) -> Void) {
 		guard !projectUrl.isEmpty, !anonKey.isEmpty else {
-			completion(.failure(NSError(domain: "SupabaseConfig", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing SUPABASE_URL or SUPABASE_ANON_KEY"])))
+			completion(.failure(NSError(domain: "SupabaseConfig", code: -1, userInfo: [NSLocalizedDescriptionKey: "Database configuration missing. Please check Keys.swift file."])))
 			return
 		}
 		
@@ -160,7 +160,7 @@ final class SupabaseService {
 	
 	func getAllCompatibilityData(completion: @escaping (Result<[CompatibilityResponse], Error>) -> Void) {
 		guard !projectUrl.isEmpty, !anonKey.isEmpty else {
-			completion(.failure(NSError(domain: "SupabaseConfig", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing SUPABASE_URL or SUPABASE_ANON_KEY"])))
+			completion(.failure(NSError(domain: "SupabaseConfig", code: -1, userInfo: [NSLocalizedDescriptionKey: "Database configuration missing. Please check Keys.swift file."])))
 			return
 		}
 		
@@ -219,7 +219,7 @@ final class SupabaseService {
 	
 	func getAllPairingsData(completion: @escaping (Result<[PairingResponse], Error>) -> Void) {
 		guard !projectUrl.isEmpty, !anonKey.isEmpty else {
-			completion(.failure(NSError(domain: "SupabaseConfig", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing SUPABASE_URL or SUPABASE_ANON_KEY"])))
+			completion(.failure(NSError(domain: "SupabaseConfig", code: -1, userInfo: [NSLocalizedDescriptionKey: "Database configuration missing. Please check Keys.swift file."])))
 			return
 		}
 		
