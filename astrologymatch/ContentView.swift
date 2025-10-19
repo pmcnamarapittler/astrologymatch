@@ -108,22 +108,46 @@ enum ShadowStyle {
 
 // MARK: - View Modifiers
 struct AppButtonStyle: ViewModifier {
+    @Environment(\.isEnabled) private var isEnabled
     enum Style { case primary, secondary }
     let style: Style
     let isPressed: Bool
     
     func body(content: Content) -> some View {
-        content
+        // Compute colors based on style and enabled state
+        let fg: Color
+        let bg: Color
+        let border: Color
+        switch style {
+        case .primary:
+            fg = isEnabled ? .white : Color.white.opacity(0.7)
+            bg = isEnabled ? AppColors.primaryText : AppColors.primaryText.opacity(0.2)
+            border = .clear
+        case .secondary:
+            fg = isEnabled ? AppColors.primaryText : AppColors.secondaryText.opacity(0.6)
+            bg = Color.clear
+            border = isEnabled ? AppColors.borderDefault : AppColors.dividerDefault
+        }
+        // Disabled override: filled gray pill and muted foreground
+        let effectiveBG = isEnabled ? bg : AppColors.dividerDefault
+        let effectiveFG = isEnabled ? fg : AppColors.secondaryText.opacity(0.8)
+        let effectiveBorder = isEnabled ? border : Color.clear
+        
+        return content
             .font(Typography.buttonPrimary)
-            .foregroundColor(style == .primary ? .white : AppColors.primaryText)
+            .foregroundColor(effectiveFG)
             .frame(maxWidth: .infinity)
-            .frame(height: Sizing.buttonHeightSmall)
-            .background(style == .primary ? AppColors.primaryText : Color.clear)
-            .overlay(
-                RoundedRectangle(cornerRadius: 0)
-                    .stroke(style == .secondary ? AppColors.borderDefault : Color.clear, lineWidth: 1)
+            .frame(height: Sizing.buttonHeightLarge)
+            .background(
+                Rectangle()
+                    .fill(effectiveBG)
             )
-            .scaleEffect(isPressed ? 0.95 : 1.0)
+            .overlay(
+                Rectangle()
+                    .stroke(effectiveBorder, lineWidth: 1)
+            )
+            .opacity(isEnabled ? 1 : 0.55)
+            .scaleEffect((isPressed && isEnabled) ? 0.95 : 1.0)
     }
 }
 
@@ -235,8 +259,27 @@ extension RadialGradient {
 }
 
 // MARK: - Main App Structure
+// MARK: - App Screen Enum
+enum AppScreen: Int {
+    case landing = 0
+    case userInfo = 1
+    case partnerInfo = 2
+    case calculating = 3
+    case results = 4
+    
+    var title: String {
+        switch self {
+        case .landing: return "Astrology Match"
+        case .userInfo: return "Your Info"
+        case .partnerInfo: return "Partner Info"
+        case .calculating: return "Calculating"
+        case .results: return "Results"
+        }
+    }
+}
+
 struct ContentView: View {
-    @State private var currentScreen = 0
+    @State private var currentScreen: AppScreen = .landing
     @State private var userName: String = ""
     @State private var userBirthday: Date = Date()
     @State private var userTimeOfBirth: Date = Date()
@@ -249,10 +292,10 @@ struct ContentView: View {
         TabView(selection: $currentScreen) {
             LandingView(onGetStarted: {
                 withAnimation(.easeInOut(duration: 0.5)) {
-                    currentScreen = 1
+                    currentScreen = .userInfo
                 }
             })
-            .tag(0)
+            .tag(AppScreen.landing)
             
             UserInfoView(
                 name: $userName,
@@ -260,31 +303,42 @@ struct ContentView: View {
                 timeOfBirth: $userTimeOfBirth,
                 onContinue: {
                     withAnimation(.easeInOut(duration: 0.5)) {
-                        currentScreen = 2
+                        currentScreen = .partnerInfo
                     }
                 },
                 onBack: {
                     withAnimation(.easeInOut(duration: 0.5)) {
-                        currentScreen = 0
+                        currentScreen = .landing
                     }
                 }
             )
-            .tag(1)
+            .tag(AppScreen.userInfo)
             
             PartnerInfoView(
                 name: $partnerName,
                 birthday: $partnerBirthday,
                 timeOfBirth: $partnerTimeOfBirth,
                 onSubmit: {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        currentScreen = .calculating
+                    }
                     fetchCompatibilityData()
                 },
                 onBack: {
                     withAnimation(.easeInOut(duration: 0.5)) {
-                        currentScreen = 1
+                        currentScreen = .userInfo
                     }
                 }
             )
-            .tag(2)
+            .tag(AppScreen.partnerInfo)
+            
+            CalculatingView(
+                userName: userName,
+                partnerName: partnerName,
+                userBirthday: userBirthday,
+                partnerBirthday: partnerBirthday
+            )
+            .tag(AppScreen.calculating)
             
             ResultsView(
                 userName: userName,
@@ -296,7 +350,7 @@ struct ContentView: View {
                 compatibilityData: compatibilityData,
                 onStartOver: {
                     withAnimation(.easeInOut(duration: 0.5)) {
-                        currentScreen = 0
+                        currentScreen = .landing
                         userName = ""
                         userBirthday = Date()
                         userTimeOfBirth = Date()
@@ -307,13 +361,15 @@ struct ContentView: View {
                     }
                 }
             )
-            .tag(3)
+            .tag(AppScreen.results)
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
+        .highPriorityGesture(DragGesture())
         .edgesIgnoringSafeArea(.all)
     }
     
     private func fetchCompatibilityData() {
+        let startTime = Date()
         let userSign = ZodiacUtils.zodiacSignName(from: userBirthday)
         let partnerSign = ZodiacUtils.zodiacSignName(from: partnerBirthday)
         
@@ -321,10 +377,14 @@ struct ContentView: View {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let compatibility):
+                    let elapsed = Date().timeIntervalSince(startTime)
+                    let remaining = max(0, 3.0 - elapsed)
                     self.compatibilityData = compatibility
                     self.storePairingData(compatibility: compatibility)
-                    withAnimation(.easeInOut(duration: 0.5)) {
-                        self.currentScreen = 3
+                    DispatchQueue.main.asyncAfter(deadline: .now() + remaining) {
+                        withAnimation(.easeInOut(duration: 0.5)) {
+                            self.currentScreen = .results
+                        }
                     }
                 case .failure(_):
                     let fallbackCompatibility = SupabaseService.CompatibilityResponse(
@@ -333,10 +393,14 @@ struct ContentView: View {
                         CompatibilityScore: 75,
                         Blurb: "Unable to load detailed compatibility data. Your signs show good potential for connection."
                     )
+                    let elapsed = Date().timeIntervalSince(startTime)
+                    let remaining = max(0, 3.0 - elapsed)
                     self.compatibilityData = fallbackCompatibility
                     self.storePairingData(compatibility: fallbackCompatibility)
-                    withAnimation(.easeInOut(duration: 0.5)) {
-                        self.currentScreen = 3
+                    DispatchQueue.main.asyncAfter(deadline: .now() + remaining) {
+                        withAnimation(.easeInOut(duration: 0.5)) {
+                            self.currentScreen = .results
+                        }
                     }
                 }
             }
@@ -356,6 +420,129 @@ struct ContentView: View {
             insights: compatibility.Blurb
         ) { result in
             // Handle result silently
+        }
+    }
+// MARK: - Calculating View
+}
+struct CalculatingView: View {
+    let userName: String
+    let partnerName: String
+    let userBirthday: Date
+    let partnerBirthday: Date
+    
+    @State private var contentOpacity: Double = 0.0
+    @State private var dotsIndex: Int = 0
+    private let dotsFrames: [String] = ["", ".", "..", "..."]
+    @State private var step: Int = 0
+    @State private var stepTimer: Timer?
+    
+    private var userSignName: String {
+        ZodiacUtils.zodiacSignName(from: userBirthday)
+    }
+    private var partnerSignName: String {
+        ZodiacUtils.zodiacSignName(from: partnerBirthday)
+    }
+    private var userSignGlyph: String { signSymbol(for: userSignName) }
+    private var partnerSignGlyph: String { signSymbol(for: partnerSignName) }
+    
+    var body: some View {
+        ZStack {
+            // Luxe background reused from Landing
+            LinearGradient.appBackground.edgesIgnoringSafeArea(.all)
+            StarfieldView(isAnimating: true)
+            
+            VStack(spacing: Spacing.xl) {
+                Spacer().frame(height: Spacing.huge)
+                
+                // Headline with animated ellipsis
+                Text("Hang tight — we're calculating your results\(dotsFrames[dotsIndex])")
+                    .font(Typography.displaySmall)
+                    .foregroundColor(AppColors.starWhite)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Spacing.xl)
+                    .opacity(contentOpacity)
+                
+                // Names and zodiac glyphs
+                HStack(alignment: .center, spacing: Spacing.lg) {
+                    VStack(spacing: Spacing.xs) {
+                        Text(userSignGlyph)
+                            .font(Typography.displayMedium)
+                            .foregroundColor(AppColors.overlayLight)
+                        Text(userName.isEmpty ? "You" : userName)
+                            .font(Typography.bodyLarge)
+                            .foregroundColor(AppColors.starWhite)
+                            .lineLimit(1)
+                    }
+                    Text("✦")
+                        .font(Typography.displayMedium)
+                        .foregroundColor(AppColors.overlayLight)
+                    VStack(spacing: Spacing.xs) {
+                        Text(partnerSignGlyph)
+                            .font(Typography.displayMedium)
+                            .foregroundColor(AppColors.overlayLight)
+                        Text(partnerName.isEmpty ? "Partner" : partnerName)
+                            .font(Typography.bodyLarge)
+                            .foregroundColor(AppColors.starWhite)
+                            .lineLimit(1)
+                    }
+                }
+                .opacity(contentOpacity)
+                
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle())
+                    .scaleEffect(1.3)
+                    .tint(AppColors.starWhite)
+                    .opacity(contentOpacity)
+
+                HStack(spacing: Spacing.sm) {
+                    ForEach(0..<3) { i in
+                        Circle()
+                            .fill(i < step ? AppColors.starWhite : AppColors.starWhite.opacity(0.25))
+                            .frame(width: 8, height: 8)
+                    }
+                }
+                .opacity(contentOpacity)
+                
+                Spacer()
+            }
+        }
+        .onAppear {
+            withAnimation(.easeIn(duration: AnimationDuration.medium)) {
+                contentOpacity = 1.0
+            }
+            // Ellipsis animator (every 0.5s)
+            Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+                dotsIndex = (dotsIndex + 1) % dotsFrames.count
+            }
+            // 3-step progress: one dot per second up to 3
+            step = 0
+            stepTimer?.invalidate()
+            stepTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { t in
+                if step < 3 { step += 1 } else { t.invalidate() }
+            }
+        }
+        .onDisappear {
+            stepTimer?.invalidate()
+            stepTimer = nil
+        }
+    }
+    
+    // Map sign names to Unicode glyphs used elsewhere in the app
+    private func signSymbol(for name: String) -> String {
+        switch name.lowercased() {
+        case "aries": return "\u{2648}"
+        case "taurus": return "\u{2649}"
+        case "gemini": return "\u{264A}"
+        case "cancer": return "\u{264B}"
+        case "leo": return "\u{264C}"
+        case "virgo": return "\u{264D}"
+        case "libra": return "\u{264E}"
+        case "scorpio": return "\u{264F}"
+        case "sagittarius": return "\u{2650}"
+        case "capricorn": return "\u{2651}"
+        case "aquarius": return "\u{2652}"
+        case "pisces": return "\u{2653}"
+        default: return "\u{2605}" // star fallback
         }
     }
 }
@@ -433,6 +620,11 @@ struct UserInfoView: View {
     @State private var contentScale = 0.8
     @State private var buttonPressed = false
     @FocusState private var isNameFocused: Bool
+    @State private var hasSetBirthday = false
+    @State private var hasSetTime = false
+    private var isFormValid: Bool {
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && hasSetBirthday && hasSetTime
+    }
     let onContinue: () -> Void
     let onBack: () -> Void
     
@@ -488,6 +680,9 @@ struct UserInfoView: View {
                             DatePicker("", selection: $birthday, displayedComponents: .date)
                                 .labelsHidden()
                                 .datePickerStyle(.compact)
+                                .onChange(of: birthday) { _, _ in
+                                    hasSetBirthday = true
+                                }
                         }
                         
                         VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -497,6 +692,9 @@ struct UserInfoView: View {
                             DatePicker("", selection: $timeOfBirth, displayedComponents: .hourAndMinute)
                                 .labelsHidden()
                                 .datePickerStyle(.compact)
+                                .onChange(of: timeOfBirth) { _, _ in
+                                    hasSetTime = true
+                                }
                         }
                     }
                 }
@@ -519,7 +717,8 @@ struct UserInfoView: View {
                         Image(systemName: "arrow.right")
                     }
                 }
-                .appButtonStyle(.secondary, isPressed: buttonPressed)
+                .appButtonStyle(isFormValid ? .primary : .secondary, isPressed: buttonPressed)
+                .disabled(!isFormValid)
                 .padding(.horizontal, Spacing.xl)
                 .padding(.bottom, Spacing.xxxl)
                 .scaleEffect(contentScale)
@@ -545,6 +744,11 @@ struct PartnerInfoView: View {
     @State private var contentScale = 0.8
     @State private var buttonPressed = false
     @FocusState private var isNameFocused: Bool
+    @State private var hasSetBirthday = false
+    @State private var hasSetTime = false
+    private var isFormValid: Bool {
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && hasSetBirthday && hasSetTime
+    }
     let onSubmit: () -> Void
     let onBack: () -> Void
     
@@ -600,6 +804,9 @@ struct PartnerInfoView: View {
                             DatePicker("", selection: $birthday, displayedComponents: .date)
                                 .labelsHidden()
                                 .datePickerStyle(.compact)
+                                .onChange(of: birthday) { _, _ in
+                                    hasSetBirthday = true
+                                }
                         }
                         
                         VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -609,6 +816,9 @@ struct PartnerInfoView: View {
                             DatePicker("", selection: $timeOfBirth, displayedComponents: .hourAndMinute)
                                 .labelsHidden()
                                 .datePickerStyle(.compact)
+                                .onChange(of: timeOfBirth) { _, _ in
+                                    hasSetTime = true
+                                }
                         }
                     }
                 }
@@ -631,7 +841,8 @@ struct PartnerInfoView: View {
                         Image(systemName: "arrow.right")
                     }
                 }
-                .appButtonStyle(.secondary, isPressed: buttonPressed)
+                .appButtonStyle(isFormValid ? .primary : .secondary, isPressed: buttonPressed)
+                .disabled(!isFormValid)
                 .padding(.horizontal, Spacing.xl)
                 .padding(.bottom, Spacing.xxxl)
                 .scaleEffect(contentScale)
