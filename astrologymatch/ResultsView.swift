@@ -21,159 +21,87 @@ struct ResultsView: View {
     @State private var contentOpacity = 0.0
     @State private var starsRotation = 0.0
     @State private var buttonPressed = false
-    @State private var showCompatibilityList = false
-    @State private var showPairingsList = false
+    private enum BottomTab: Int, CaseIterable { case home, explore, pairings }
+    @State private var selectedTab: BottomTab = .home
+    @State private var topButtonsPressed = false
     
     var body: some View {
         ZStack {
             AppColors.backgroundPrimary.edgesIgnoringSafeArea(.all)
-            
-            VStack(spacing: Spacing.xl) {
-                Spacer()
-                    .frame(height: Spacing.huge)
-                
-                VStack(spacing: Spacing.xs) {
+            VStack(spacing: 0) {
+                // Top Nav Bar
+                HStack(alignment: .center) {
                     Text("Compatibility Results")
                         .font(Typography.displaySmall)
                         .foregroundColor(AppColors.primaryText)
-                        .opacity(contentOpacity)
-                    
-                    Text("\(userName) & \(partnerName)")
-                        .font(Typography.bodyLarge)
-                        .foregroundColor(AppColors.primaryText)
-                        .opacity(contentOpacity)
-                }
-                
-                VStack(spacing: Spacing.md) {
-                    let userSign = ZodiacUtils.zodiacSignName(from: userBirthday)
-                    let partnerSign = ZodiacUtils.zodiacSignName(from: partnerBirthday)
-                    
-                    Text("\(userSign) & \(partnerSign)")
-                        .font(Typography.bodyMedium)
-                        .foregroundColor(AppColors.primaryText)
-                    
-                    Text("\(compatibilityData?.score ?? 0)%")
-                        .font(.system(size: 64, weight: .bold))
-                        .foregroundColor(AppColors.primaryText)
-                    
-                    Text(compatibilityLevel())
-                        .font(Typography.bodyLarge)
-                        .foregroundColor(AppColors.primaryText)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, Spacing.xxl)
-                .background(
-                    Rectangle()
-                        .fill(AppColors.backgroundPrimary)
-                        .overlay(
-                            Rectangle()
-                                .stroke(AppColors.borderDefault, lineWidth: 1)
-                        )
-                )
-                .padding(.horizontal, Spacing.xl)
-                .opacity(contentOpacity)
-                
-                HStack(alignment: .top, spacing: Spacing.sm) {
-                    Image(systemName: "flame.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(.orange)
-                    
-                    VStack(alignment: .leading, spacing: Spacing.xxs) {
-                        Text("Romantic Compatibility")
-                            .font(Typography.bodyMedium)
-                            .fontWeight(.bold)
-                            .foregroundColor(AppColors.primaryText)
-                        
-                        Text(compatibilityData?.blurb ?? "Compatibility data unavailable")
-                            .font(Typography.bodySmall)
-                            .foregroundColor(AppColors.primaryText)
-                            .multilineTextAlignment(.leading)
-                    }
-                    
                     Spacer()
+                    // Share
+                    ShareLink(item: shareText) {
+                        Image(systemName: "square.and.arrow.up")
+                            .imageScale(.large)
+                    }
+                    .padding(.trailing, Spacing.md)
+                    // Restart
+                    Button(action: {
+                        withAnimation(.spring(response: AnimationDuration.medium, dampingFraction: 0.6)) {
+                            topButtonsPressed = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + AnimationDuration.fast) {
+                            onStartOver()
+                            topButtonsPressed = false
+                        }
+                    }) {
+                        Image(systemName: "arrow.clockwise")
+                            .imageScale(.large)
+                    }
                 }
                 .padding(.horizontal, Spacing.xl)
-                .padding(.vertical, Spacing.md)
-                .background(
-                    Rectangle()
-                        .fill(AppColors.secondaryText.opacity(0.1))
-                )
-                .padding(.horizontal, Spacing.xl)
-                .opacity(contentOpacity)
-                
-                Button(action: {
-                    showCompatibilityList = true
-                }) {
-                    HStack {
-                        Image(systemName: "list.bullet")
-                            .font(Typography.bodyMedium)
-                        Text("View All Compatibility Scores")
-                            .font(Typography.bodyMedium)
+                .padding(.top, Spacing.xxxl)
+                .padding(.bottom, Spacing.md)
+                .overlay(Rectangle().frame(height: 1).foregroundColor(AppColors.dividerDefault), alignment: .bottom)
+
+                // Content area switches by tab
+                Group {
+                    switch selectedTab {
+                    case .home:
+                        ResultsHomeSection(
+                            userName: userName,
+                            partnerName: partnerName,
+                            userBirthday: userBirthday,
+                            partnerBirthday: partnerBirthday,
+                            compatibilityData: compatibilityData,
+                            onExploreTapped: { withAnimation(.easeInOut(duration: 0.2)) { selectedTab = .explore } },
+                            onPairingsTapped: { withAnimation(.easeInOut(duration: 0.2)) { selectedTab = .pairings } }
+                        )
+                    case .explore:
+                        let userSign = ZodiacUtils.zodiacSignName(from: userBirthday)
+                        CompatibilityListView(userSign: userSign, showDone: false)
+                            .padding(.horizontal, Spacing.xl)
+                    case .pairings:
+                        PairingsListView(showDone: false)
+                            .padding(.horizontal, Spacing.xl)
                     }
-                    .foregroundColor(.blue)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.sm)
-                    .background(
-                        Rectangle()
-                            .fill(Color.blue.opacity(0.1))
-                            .overlay(
-                                Rectangle()
-                                    .stroke(Color.blue.opacity(0.3), lineWidth: 1)
-                            )
-                    )
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+                // Bottom Nav Bar
+                HStack {
+                    BottomTabButton(title: "Home", systemImage: "house", isSelected: selectedTab == .home) {
+                        withAnimation(.easeInOut(duration: 0.2)) { selectedTab = .home }
+                    }
+                    BottomTabButton(title: "Explore", systemImage: "magnifyingglass", isSelected: selectedTab == .explore) {
+                        withAnimation(.easeInOut(duration: 0.2)) { selectedTab = .explore }
+                    }
+                    BottomTabButton(title: "My Pairings", systemImage: "person.2", isSelected: selectedTab == .pairings) {
+                        withAnimation(.easeInOut(duration: 0.2)) { selectedTab = .pairings }
+                    }
                 }
                 .padding(.horizontal, Spacing.xl)
-                .opacity(contentOpacity)
-                
-                Button(action: {
-                    showPairingsList = true
-                }) {
-                    HStack {
-                        Image(systemName: "person.2")
-                            .font(Typography.bodyMedium)
-                        Text("View All User Scores")
-                            .font(Typography.bodyMedium)
-                    }
-                    .foregroundColor(.green)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.sm)
-                    .background(
-                        Rectangle()
-                            .fill(Color.green.opacity(0.1))
-                            .overlay(
-                                Rectangle()
-                                    .stroke(Color.green.opacity(0.3), lineWidth: 1)
-                            )
-                    )
-                }
-                .padding(.horizontal, Spacing.xl)
-                .opacity(contentOpacity)
-                
-                Spacer()
-                
-                Button(action: {
-                    withAnimation(.spring(response: AnimationDuration.medium, dampingFraction: 0.6)) {
-                        buttonPressed = true
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + AnimationDuration.fast) {
-                        onStartOver()
-                        buttonPressed = false
-                    }
-                }) {
-                    Text("Start Over")
-                }
-                .appButtonStyle(.secondary, isPressed: buttonPressed)
-                .padding(.horizontal, Spacing.xl)
-                .padding(.bottom, Spacing.xxxl)
-                .opacity(contentOpacity)
+                .padding(.top, Spacing.md)
+                .padding(.bottom, Spacing.lg)
+                .background(AppColors.backgroundPrimary)
+                .overlay(Rectangle().frame(height: 1).foregroundColor(AppColors.dividerDefault), alignment: .top)
             }
-        }
-        .sheet(isPresented: $showCompatibilityList) {
-            let userSign = ZodiacUtils.zodiacSignName(from: userBirthday)
-            CompatibilityListView(userSign: userSign)
-        }
-        .sheet(isPresented: $showPairingsList) {
-            PairingsListView()
         }
         .onAppear {
             isAnimating = true
@@ -184,6 +112,11 @@ struct ResultsView: View {
                 starsRotation = 360
             }
         }
+    }
+
+    private var shareText: String {
+        let scoreText = compatibilityData?.score != nil ? "\(compatibilityData!.score)%" : "great"
+        return "Our compatibility is \(scoreText)! — Astrology Match"
     }
     
     
@@ -208,35 +141,38 @@ struct ResultsView: View {
 
 struct CompatibilityListView: View {
     let userSign: String
+    var showDone: Bool = true
     @State private var compatibilityData: [SupabaseService.CompatibilityResponse] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
-    @Environment(\.presentationMode) var presentationMode
-    
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
         ZStack {
             AppColors.backgroundPrimary.edgesIgnoringSafeArea(.all)
-            
+
             VStack {
                 HStack {
                     Text("\(userSign) Compatibility")
                         .font(Typography.displaySmall)
                         .foregroundColor(AppColors.primaryText)
-                    
+
                     Spacer()
-                    
-                    Button("Done") {
-                        withAnimation(.easeInOut(duration: AnimationDuration.medium)) {
-                            presentationMode.wrappedValue.dismiss()
+
+                    if showDone {
+                        Button("Done") {
+                            withAnimation(.easeInOut(duration: AnimationDuration.medium)) {
+                                dismiss()
+                            }
                         }
+                        .font(Typography.bodyMedium)
+                        .foregroundColor(.blue)
                     }
-                    .font(Typography.bodyMedium)
-                    .foregroundColor(.blue)
                 }
                 .padding(.horizontal, Spacing.xl)
                 .padding(.top, Spacing.lg)
                 .padding(.bottom, Spacing.md)
-                
+
                 if isLoading {
                     VStack {
                         ProgressView()
@@ -273,7 +209,7 @@ struct CompatibilityListView: View {
             loadCompatibilityData()
         }
     }
-    
+
     private func loadCompatibilityData() {
         SupabaseService.shared.getAllCompatibilityData { result in
             DispatchQueue.main.async {
@@ -351,35 +287,38 @@ struct CompatibilityRowView: View {
 }
 
 struct PairingsListView: View {
+    var showDone: Bool = true
     @State private var pairingsData: [SupabaseService.PairingResponse] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
-    @Environment(\.presentationMode) var presentationMode
-    
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
         ZStack {
             AppColors.backgroundPrimary.edgesIgnoringSafeArea(.all)
-            
+
             VStack {
                 HStack {
                     Text("All User Pairings")
                         .font(Typography.displaySmall)
                         .foregroundColor(AppColors.primaryText)
-                    
+
                     Spacer()
-                    
-                    Button("Done") {
-                        withAnimation(.easeInOut(duration: AnimationDuration.medium)) {
-                            presentationMode.wrappedValue.dismiss()
+
+                    if showDone {
+                        Button("Done") {
+                            withAnimation(.easeInOut(duration: AnimationDuration.medium)) {
+                                dismiss()
+                            }
                         }
+                        .font(Typography.bodyMedium)
+                        .foregroundColor(.blue)
                     }
-                    .font(Typography.bodyMedium)
-                    .foregroundColor(.blue)
                 }
                 .padding(.horizontal, Spacing.xl)
                 .padding(.top, Spacing.lg)
                 .padding(.bottom, Spacing.md)
-                
+
                 if isLoading {
                     VStack {
                         ProgressView()
@@ -416,7 +355,7 @@ struct PairingsListView: View {
             loadPairingsData()
         }
     }
-    
+
     private func loadPairingsData() {
         SupabaseService.shared.getAllPairingsData { result in
             DispatchQueue.main.async {
@@ -532,5 +471,98 @@ struct ResultsView_Previews: PreviewProvider {
             ),
             onStartOver: {}
         )
+    }
+}
+
+private struct BottomTabButton: View {
+    let title: String
+    let systemImage: String
+    let isSelected: Bool
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: Spacing.xs) {
+                Image(systemName: systemImage)
+                Text(title).font(Typography.labelSmall)
+            }
+            .foregroundColor(isSelected ? AppColors.primaryText : AppColors.secondaryText)
+            .frame(maxWidth: .infinity)
+        }
+    }
+}
+
+private struct ResultsHomeSection: View {
+    let userName: String
+    let partnerName: String
+    let userBirthday: Date
+    let partnerBirthday: Date
+    let compatibilityData: SupabaseService.CompatibilityResponse?
+    let onExploreTapped: () -> Void
+    let onPairingsTapped: () -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.xl) {
+                // Names
+                Text("\(userName.isEmpty ? "You" : userName) & \(partnerName.isEmpty ? "Partner" : partnerName)")
+                    .font(Typography.displaySmall)
+                    .foregroundColor(AppColors.primaryText)
+
+                // Score card
+                VStack(spacing: Spacing.md) {
+                    Text("\(ZodiacUtils.zodiacSignName(from: userBirthday)) & \(ZodiacUtils.zodiacSignName(from: partnerBirthday))")
+                        .font(Typography.bodyLarge)
+                        .foregroundColor(AppColors.primaryText)
+                    Text("\(compatibilityData?.score ?? 0)%")
+                        .font(.system(size: 56, weight: .light))
+                        .foregroundColor(AppColors.primaryText)
+                    Text("\((compatibilityData?.score ?? 0) >= 80 ? "Highly Compatible" : "Compatible")")
+                        .font(Typography.bodyMedium)
+                        .foregroundColor(AppColors.secondaryText)
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .overlay(Rectangle().stroke(AppColors.dividerDefault, lineWidth: 1))
+
+                // Romantic Compatibility card
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    HStack(spacing: Spacing.xs) {
+                        Text("🔥")
+                        Text("Romantic Compatibility").font(Typography.bodyLarge)
+                    }
+                    Text(compatibilityData?.blurb ?? "Compatibility data unavailable")
+                        .font(Typography.bodyMedium)
+                        .foregroundColor(AppColors.secondaryText)
+                }
+                .padding()
+                .background(AppColors.dividerDefault.opacity(0.2))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                // Quick nav cards
+                HStack(spacing: Spacing.lg) {
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        Image(systemName: "magnifyingglass")
+                        Text("Explore Signs").font(Typography.bodyLarge)
+                        Text("Browse all matches").font(Typography.labelSmall).foregroundColor(AppColors.secondaryText)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppColors.dividerDefault, lineWidth: 1))
+                    .onTapGesture { onExploreTapped() }
+
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        Image(systemName: "person.2")
+                        Text("My Pairings").font(Typography.bodyLarge)
+                        Text("View all checks").font(Typography.labelSmall).foregroundColor(AppColors.secondaryText)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppColors.dividerDefault, lineWidth: 1))
+                    .onTapGesture { onPairingsTapped() }
+                }
+            }
+            .padding(.horizontal, Spacing.xl)
+            .padding(.vertical, Spacing.lg)
+        }
     }
 }
