@@ -199,6 +199,7 @@ struct ContentView: View {
     @State private var partnerBirthday: Date = Date()
     @State private var partnerTimeOfBirth: Date = Date()
     @State private var compatibilityData: SupabaseService.CompatibilityResponse?
+    @State private var resetTrigger = UUID()
     
     var body: some View {
         TabView(selection: $currentScreen) {
@@ -213,6 +214,7 @@ struct ContentView: View {
                 name: $userName,
                 birthday: $userBirthday,
                 timeOfBirth: $userTimeOfBirth,
+                resetTrigger: resetTrigger,
                 onContinue: {
                     withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
                         currentScreen = 2
@@ -230,6 +232,7 @@ struct ContentView: View {
                 name: $partnerName,
                 birthday: $partnerBirthday,
                 timeOfBirth: $partnerTimeOfBirth,
+                resetTrigger: resetTrigger,
                 onSubmit: {
                     fetchCompatibilityData()
                 },
@@ -258,6 +261,18 @@ struct ContentView: View {
             .tag(3)
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 50)
+                .onChanged { value in
+                    // Only block very specific horizontal swipes - must be almost purely horizontal
+                    let dx = abs(value.translation.width)
+                    let dy = abs(value.translation.height)
+                    // Only consume if horizontal is at least 5x greater than vertical AND significant distance
+                    if dx > dy * 5 && dx > 50 {
+                        // This is a clear horizontal swipe for paging - consume it
+                    }
+                }
+        )
         .ignoresSafeArea()
     }
     
@@ -270,6 +285,7 @@ struct ContentView: View {
         partnerBirthday = Date()
         partnerTimeOfBirth = Date()
         compatibilityData = nil
+        resetTrigger = UUID() // Trigger view resets
     }
     
     private func fetchCompatibilityData() {
@@ -441,6 +457,7 @@ struct UserInfoView: View {
     @Binding var name: String
     @Binding var birthday: Date
     @Binding var timeOfBirth: Date
+    let resetTrigger: UUID
     @State private var wheelRotation = 0.0
     @State private var contentScale = 0.85
     @State private var contentOpacity = 0.0
@@ -452,7 +469,8 @@ struct UserInfoView: View {
     let onBack: () -> Void
     
     private var isFormValid: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty && birthdaySet && timeSet
+        let nameValid = !name.trimmingCharacters(in: .whitespaces).isEmpty
+        return nameValid && birthdaySet && timeSet
     }
     
     private var userZodiacSign: String? {
@@ -505,15 +523,18 @@ struct UserInfoView: View {
                             }
                         }
                         
+                        VStack(spacing: Spacing.lg) {
+                            TextField("", text: $name, prompt: Text("Enter your name").foregroundColor(AppColors.tertiaryText))
+                                .focused($isNameFocused)
+                                .enhancedFormField(label: "Your Name", isFocused: isNameFocused)
+                        }
+                        .padding(.horizontal, Spacing.xl)
+                        
                         EnhancedAstrologyWheel(rotation: wheelRotation, highlightedSign: userZodiacSign)
                             .frame(width: Sizing.wheelMedium, height: Sizing.wheelMedium)
                             .padding(.vertical, Spacing.md)
                         
                         VStack(spacing: Spacing.lg) {
-                            TextField("", text: $name, prompt: Text("Enter your name").foregroundColor(AppColors.tertiaryText))
-                                .focused($isNameFocused)
-                                .enhancedFormField(label: "Your Name", isFocused: isNameFocused)
-                            
                             HStack(spacing: Spacing.md) {
                                 VStack(alignment: .leading, spacing: Spacing.xs) {
                                     Text("Birthday")
@@ -640,6 +661,12 @@ struct UserInfoView: View {
             }
             startInitialRotation()
         }
+        .onChange(of: resetTrigger) { _, _ in
+            // Reset internal state when resetTrigger changes
+            birthdaySet = false
+            timeSet = false
+            isNameFocused = false
+        }
     }
     
     private func startInitialRotation() {
@@ -664,6 +691,7 @@ struct PartnerInfoView: View {
     @Binding var name: String
     @Binding var birthday: Date
     @Binding var timeOfBirth: Date
+    let resetTrigger: UUID
     @State private var wheelRotation = 0.0
     @State private var contentScale = 0.85
     @State private var contentOpacity = 0.0
@@ -676,7 +704,8 @@ struct PartnerInfoView: View {
     let onBack: () -> Void
     
     private var isFormValid: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty && birthdaySet && timeSet
+        let nameValid = !name.trimmingCharacters(in: .whitespaces).isEmpty
+        return nameValid && birthdaySet && timeSet
     }
     
     private var partnerZodiacSign: String? {
@@ -729,15 +758,18 @@ struct PartnerInfoView: View {
                             }
                         }
                         
+                        VStack(spacing: Spacing.lg) {
+                            TextField("", text: $name, prompt: Text("Enter their name").foregroundColor(AppColors.tertiaryText))
+                                .focused($isNameFocused)
+                                .enhancedFormField(label: "Their Name", isFocused: isNameFocused)
+                        }
+                        .padding(.horizontal, Spacing.xl)
+                        
                         EnhancedAstrologyWheel(rotation: wheelRotation, highlightedSign: partnerZodiacSign)
                             .frame(width: Sizing.wheelMedium, height: Sizing.wheelMedium)
                             .padding(.vertical, Spacing.md)
                         
                         VStack(spacing: Spacing.lg) {
-                            TextField("", text: $name, prompt: Text("Enter their name").foregroundColor(AppColors.tertiaryText))
-                                .focused($isNameFocused)
-                                .enhancedFormField(label: "Their Name", isFocused: isNameFocused)
-                            
                             HStack(spacing: Spacing.md) {
                                 VStack(alignment: .leading, spacing: Spacing.xs) {
                                     Text("Birthday")
@@ -869,6 +901,21 @@ struct PartnerInfoView: View {
                                                                         contentOpacity = 1.0
                                                                     }
                                                                     startInitialRotation()
+                                                                }
+                                                                .onChange(of: resetTrigger) { _, _ in
+                                                                    // Reset internal state when resetTrigger changes
+                                                                    birthdaySet = false
+                                                                    timeSet = false
+                                                                    isNameFocused = false
+                                                                    isLoading = false
+                                                                    // Optional resets for a fully fresh form:
+                                                                    name = ""
+                                                                    birthday = Date()
+                                                                    timeOfBirth = Date()
+                                                                }
+                                                                .onDisappear {
+                                                                    // Avoid sticky loading state when navigating away
+                                                                    isLoading = false
                                                                 }
                                                             }
                                                             
@@ -1161,9 +1208,15 @@ struct ResultsView: View {
                                             )
                                     }
                                     
-                                    Text(formatPairingDate(pairing.created_at))
-                                        .font(.system(size: 11))
-                                        .foregroundColor(.white.opacity(0.5))
+                                    VStack(alignment: .leading, spacing: Spacing.xxs) {
+                                        Text("Birth dates: \(formatBirthDate(pairing.a_date)) & \(formatBirthDate(pairing.b_date))")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.white.opacity(0.5))
+                                        
+                                        Text("Matched on: \(formatBirthDate(pairing.created_at))")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.white.opacity(0.4))
+                                    }
                                 }
                                 .padding(Spacing.md)
                                 .background(
@@ -1243,6 +1296,10 @@ struct ResultsView: View {
                 }
             }
         }
+        .onDisappear {
+            // Reset for a clean re-animate next time
+            scoreAnimated = 0
+        }
     }
     
     private func formatPairingDate(_ dateString: String) -> String {
@@ -1250,9 +1307,40 @@ struct ResultsView: View {
         guard let date = isoFormatter.date(from: dateString) else { return dateString }
         
         let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
+        formatter.dateFormat = "MMMM d, yyyy"
         return formatter.string(from: date)
+    }
+    
+    private func formatBirthDate(_ dateString: String) -> String {
+        // Try ISO8601 format first
+        let isoFormatter = ISO8601DateFormatter()
+        if let date = isoFormatter.date(from: dateString) {
+            let outputFormatter = DateFormatter()
+            outputFormatter.dateFormat = "MMMM d, yyyy"
+            return outputFormatter.string(from: date)
+        }
+        
+        // Try different DateFormatter formats
+        let dateFormats = [
+            "yyyy-MM-dd",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+        ]
+        
+        for format in dateFormats {
+            let formatter = DateFormatter()
+            formatter.dateFormat = format
+            if let date = formatter.date(from: dateString) {
+                let outputFormatter = DateFormatter()
+                outputFormatter.dateFormat = "MMMM d, yyyy"
+                return outputFormatter.string(from: date)
+            }
+        }
+        
+        // If all parsing fails, return the original string
+        return dateString
     }
 }
                                                         // MARK: - Enhanced Components
