@@ -98,4 +98,19 @@ struct ZodiacUtils {
     static func zodiacElement(from date: Date) -> String {
         return zodiacSign(from: date).element
     }
+    // Helper function for UI - returns index 0-11 for zodiac wheel positioning
+    static func zodiacSignIndex(_ signName: String) -> Int {
+        let signs: [String] = [
+            "Aries", "Taurus", "Gemini", "Cancer",
+            "Leo", "Virgo", "Libra", "Scorpio",
+            "Sagittarius", "Capricorn", "Aquarius", "Pisces"
+        ]
+        return signs.firstIndex(of: signName) ?? 0
+    }
+    
+    // Helper function for UI - converts sign name to emoji symbol
+    static func zodiacEmoji(_ signName: String) -> String {
+        guard let sign = ZodiacSign(rawValue: signName) else { return "⭐️" }
+        return sign.symbol
+    }
 }
