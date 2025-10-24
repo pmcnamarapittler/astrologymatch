@@ -201,63 +201,67 @@ struct ContentView: View {
     @State private var compatibilityData: SupabaseService.CompatibilityResponse?
     
     var body: some View {
-        TabView(selection: $currentScreen) {
-            LandingView(onGetStarted: {
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                    currentScreen = 1
-                }
-            })
-            .tag(0)
-            
-            UserInfoView(
-                name: $userName,
-                birthday: $userBirthday,
-                timeOfBirth: $userTimeOfBirth,
-                onContinue: {
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                        currentScreen = 2
-                    }
-                },
-                onBack: {
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                        currentScreen = 0
-                    }
-                }
-            )
-            .tag(1)
-            
-            PartnerInfoView(
-                name: $partnerName,
-                birthday: $partnerBirthday,
-                timeOfBirth: $partnerTimeOfBirth,
-                onSubmit: {
-                    fetchCompatibilityData()
-                },
-                onBack: {
+        ZStack {
+            switch currentScreen {
+            case 0:
+                LandingView(onGetStarted: {
                     withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
                         currentScreen = 1
                     }
-                }
-            )
-            .tag(2)
-            
-            ResultsView(
-                userName: userName,
-                partnerName: partnerName,
-                userBirthday: userBirthday,
-                partnerBirthday: partnerBirthday,
-                userTimeOfBirth: userTimeOfBirth,
-                partnerTimeOfBirth: partnerTimeOfBirth,
-                compatibilityData: compatibilityData,
-                onStartOver: {
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                        resetApp()
+                })
+                .transition(.opacity)
+            case 1:
+                UserInfoView(
+                    name: $userName,
+                    birthday: $userBirthday,
+                    timeOfBirth: $userTimeOfBirth,
+                    onContinue: {
+                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                            currentScreen = 2
+                        }
+                    },
+                    onBack: {
+                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                            currentScreen = 0
+                        }
                     }
-                }
-            )
-            .tag(3)
+                )
+                .transition(.opacity)
+            case 2:
+                PartnerInfoView(
+                    name: $partnerName,
+                    birthday: $partnerBirthday,
+                    timeOfBirth: $partnerTimeOfBirth,
+                    onSubmit: {
+                        fetchCompatibilityData()
+                    },
+                    onBack: {
+                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                            currentScreen = 1
+                        }
+                    }
+                )
+                .transition(.opacity)
+            case 3:
+                ResultsView(
+                    userName: userName,
+                    partnerName: partnerName,
+                    userBirthday: userBirthday,
+                    partnerBirthday: partnerBirthday,
+                    userTimeOfBirth: userTimeOfBirth,
+                    partnerTimeOfBirth: partnerTimeOfBirth,
+                    compatibilityData: compatibilityData,
+                    onStartOver: {
+                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                            resetApp()
+                        }
+                    }
+                )
+                .transition(.opacity)
+            default:
+                EmptyView()
+            }
         }
-        .tabViewStyle(.page(indexDisplayMode: .never))
         .ignoresSafeArea()
     }
     
@@ -448,21 +452,22 @@ struct UserInfoView: View {
     @State private var birthdaySet = false
     @State private var timeSet = false
     @FocusState private var isNameFocused: Bool
+    @State private var keyboardHeight: CGFloat = 0
     let onContinue: () -> Void
     let onBack: () -> Void
-    
+
     private var isFormValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty && birthdaySet && timeSet
     }
-    
+
     private var userZodiacSign: String? {
         birthdaySet ? ZodiacUtils.zodiacSignName(from: birthday) : nil
     }
-    
+
     var body: some View {
         ZStack {
             LinearGradient.cosmicBackground.ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
                 HStack {
                     Button(action: {
@@ -483,16 +488,16 @@ struct UserInfoView: View {
                 .padding(.horizontal, Spacing.xl)
                 .padding(.top, Spacing.md)
                 .frame(height: Sizing.buttonHeightMedium)
-                
+
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: Spacing.lg) {
                         Spacer().frame(height: Spacing.xs)
-                        
+
                         VStack(spacing: Spacing.sm) {
                             Text("Tell us about you")
                                 .font(Typography.displaySmall)
                                 .foregroundColor(AppColors.backgroundPrimary)
-                            
+
                             if let zodiacSign = userZodiacSign {
                                 HStack(spacing: Spacing.xs) {
                                     Text(ZodiacUtils.zodiacEmoji(zodiacSign))
@@ -504,16 +509,16 @@ struct UserInfoView: View {
                                 .transition(.scale.combined(with: .opacity))
                             }
                         }
-                        
+
                         EnhancedAstrologyWheel(rotation: wheelRotation, highlightedSign: userZodiacSign)
                             .frame(width: Sizing.wheelMedium, height: Sizing.wheelMedium)
                             .padding(.vertical, Spacing.md)
-                        
+
                         VStack(spacing: Spacing.lg) {
                             TextField("", text: $name, prompt: Text("Enter your name").foregroundColor(AppColors.tertiaryText))
                                 .focused($isNameFocused)
                                 .enhancedFormField(label: "Your Name", isFocused: isNameFocused)
-                            
+
                             HStack(spacing: Spacing.md) {
                                 VStack(alignment: .leading, spacing: Spacing.xs) {
                                     Text("Birthday")
@@ -521,7 +526,7 @@ struct UserInfoView: View {
                                         .foregroundColor(AppColors.secondaryText)
                                         .textCase(.uppercase)
                                         .tracking(0.5)
-                                    
+
                                     if !birthdaySet {
                                         Button(action: {
                                             birthdaySet = true
@@ -558,14 +563,14 @@ struct UserInfoView: View {
                                             }
                                     }
                                 }
-                                
+
                                 VStack(alignment: .leading, spacing: Spacing.xs) {
                                     Text("Time")
                                         .font(Typography.labelSmall)
                                         .foregroundColor(AppColors.secondaryText)
                                         .textCase(.uppercase)
                                         .tracking(0.5)
-                                    
+
                                     if !timeSet {
                                         Button(action: {
                                             timeSet = true
@@ -602,12 +607,12 @@ struct UserInfoView: View {
                             }
                         }
                         .padding(.horizontal, Spacing.xl)
-                        
+
                         Button(action: {
                             guard isFormValid else { return }
                             let haptic = UIImpactFeedbackGenerator(style: .medium)
                             haptic.impactOccurred()
-                            
+
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                                 buttonPressed = true
                             }
@@ -628,6 +633,10 @@ struct UserInfoView: View {
                         .padding(.top, Spacing.lg)
                         .padding(.bottom, Spacing.huge)
                     }
+                    .padding(.bottom, keyboardHeight)
+                }
+                .onTapGesture {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                 }
             }
             .scaleEffect(contentScale)
@@ -639,20 +648,28 @@ struct UserInfoView: View {
                 contentOpacity = 1.0
             }
             startInitialRotation()
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
+                if let frame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                    self.keyboardHeight = frame.height
+                }
+            }
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+                self.keyboardHeight = 0
+            }
         }
     }
-    
+
     private func startInitialRotation() {
         withAnimation(.linear(duration: AnimationDuration.wheelRotation).repeatForever(autoreverses: false)) {
             wheelRotation = 360
         }
     }
-    
+
     private func updateWheelRotation() {
         guard let sign = userZodiacSign else { return }
         let signIndex = ZodiacUtils.zodiacSignIndex(sign)
         let targetRotation = Double(signIndex) * 30
-        
+
         withAnimation(.spring(response: 1.2, dampingFraction: 0.7)) {
             wheelRotation = targetRotation
         }
@@ -672,21 +689,22 @@ struct PartnerInfoView: View {
     @State private var timeSet = false
     @State private var isLoading = false
     @FocusState private var isNameFocused: Bool
+    @State private var keyboardHeight: CGFloat = 0
     let onSubmit: () -> Void
     let onBack: () -> Void
-    
+
     private var isFormValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty && birthdaySet && timeSet
     }
-    
+
     private var partnerZodiacSign: String? {
         birthdaySet ? ZodiacUtils.zodiacSignName(from: birthday) : nil
     }
-    
+
     var body: some View {
         ZStack {
             LinearGradient.cosmicBackground.ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
                 HStack {
                     Button(action: {
@@ -707,16 +725,16 @@ struct PartnerInfoView: View {
                 .padding(.horizontal, Spacing.xl)
                 .padding(.top, Spacing.md)
                 .frame(height: Sizing.buttonHeightMedium)
-                
+
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: Spacing.lg) {
                         Spacer().frame(height: Spacing.xs)
-                        
+
                         VStack(spacing: Spacing.sm) {
                             Text("Tell us about them")
                                 .font(Typography.displaySmall)
                                 .foregroundColor(AppColors.backgroundPrimary)
-                            
+
                             if let zodiacSign = partnerZodiacSign {
                                 HStack(spacing: Spacing.xs) {
                                     Text(ZodiacUtils.zodiacEmoji(zodiacSign))
@@ -728,16 +746,16 @@ struct PartnerInfoView: View {
                                 .transition(.scale.combined(with: .opacity))
                             }
                         }
-                        
+
                         EnhancedAstrologyWheel(rotation: wheelRotation, highlightedSign: partnerZodiacSign)
                             .frame(width: Sizing.wheelMedium, height: Sizing.wheelMedium)
                             .padding(.vertical, Spacing.md)
-                        
+
                         VStack(spacing: Spacing.lg) {
                             TextField("", text: $name, prompt: Text("Enter their name").foregroundColor(AppColors.tertiaryText))
                                 .focused($isNameFocused)
                                 .enhancedFormField(label: "Their Name", isFocused: isNameFocused)
-                            
+
                             HStack(spacing: Spacing.md) {
                                 VStack(alignment: .leading, spacing: Spacing.xs) {
                                     Text("Birthday")
@@ -745,7 +763,7 @@ struct PartnerInfoView: View {
                                         .foregroundColor(AppColors.secondaryText)
                                         .textCase(.uppercase)
                                         .tracking(0.5)
-                                    
+
                                     if !birthdaySet {
                                         Button(action: {
                                             birthdaySet = true
@@ -762,132 +780,144 @@ struct PartnerInfoView: View {
                                                     RoundedRectangle(cornerRadius: 12)
                                                         .fill(Color.white)
                                                         .shadow(color: Color.black.opacity(0.05), radius: 4, y: 2)
-                                                                                                        )
-                                                                                                }
-                                                                                            } else {
-                                                                                                DatePicker("", selection: $birthday, displayedComponents: .date)
-                                                                                                    .labelsHidden()
-                                                                                                    .datePickerStyle(.compact)
-                                                                                                    .accentColor(AppColors.primaryText)
-                                                                                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                                                                                    .padding(.vertical, Spacing.xs)
-                                                                                                    .padding(.horizontal, Spacing.sm)
-                                                                                                    .background(
-                                                                                                        RoundedRectangle(cornerRadius: 12)
-                                                                                                            .fill(Color.white)
-                                                                                                            .shadow(color: Color.black.opacity(0.05), radius: 4, y: 2)
-                                                                                                    )
-                                                                                                    .onChange(of: birthday) { _, _ in
-                                                                                                        updateWheelRotation()
-                                                                                                    }
-                                                                                            }
-                                                                                        }
-                                                                                        
-                                                                                        VStack(alignment: .leading, spacing: Spacing.xs) {
-                                                                                            Text("Time")
-                                                                                                .font(Typography.labelSmall)
-                                                                                                .foregroundColor(AppColors.secondaryText)
-                                                                                                .textCase(.uppercase)
-                                                                                                .tracking(0.5)
-                                                                                            
-                                                                                            if !timeSet {
-                                                                                                Button(action: {
-                                                                                                    timeSet = true
-                                                                                                    let haptic = UIImpactFeedbackGenerator(style: .light)
-                                                                                                    haptic.impactOccurred()
-                                                                                                }) {
-                                                                                                    Text("Select time")
-                                                                                                        .font(Typography.bodyMedium)
-                                                                                                        .foregroundColor(AppColors.tertiaryText)
-                                                                                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                                                                                        .padding(.vertical, Spacing.sm)
-                                                                                                        .padding(.horizontal, Spacing.md)
-                                                                                                        .background(
-                                                                                                            RoundedRectangle(cornerRadius: 12)
-                                                                                                                .fill(Color.white)
-                                                                                                                .shadow(color: Color.black.opacity(0.05), radius: 4, y: 2)
-                                                                                                        )
-                                                                                                }
-                                                                                            } else {
-                                                                                                DatePicker("", selection: $timeOfBirth, displayedComponents: .hourAndMinute)
-                                                                                                    .labelsHidden()
-                                                                                                    .datePickerStyle(.compact)
-                                                                                                    .accentColor(AppColors.primaryText)
-                                                                                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                                                                                    .padding(.vertical, Spacing.xs)
-                                                                                                    .padding(.horizontal, Spacing.sm)
-                                                                                                    .background(
-                                                                                                        RoundedRectangle(cornerRadius: 12)
-                                                                                                            .fill(Color.white)
-                                                                                                            .shadow(color: Color.black.opacity(0.05), radius: 4, y: 2)
-                                                                                                    )
-                                                                                            }
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                                .padding(.horizontal, Spacing.xl)
-                                                                                
-                                                                                Button(action: {
-                                                                                    guard isFormValid else { return }
-                                                                                    let haptic = UIImpactFeedbackGenerator(style: .medium)
-                                                                                    haptic.impactOccurred()
-                                                                                    
-                                                                                    isLoading = true
-                                                                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                                                                                        buttonPressed = true
-                                                                                    }
-                                                                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                                                                        buttonPressed = false
-                                                                                        onSubmit()
-                                                                                    }
-                                                                                }) {
-                                                                                    if isLoading {
-                                                                                        ProgressView()
-                                                                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                                                                    } else {
-                                                                                        HStack(spacing: Spacing.xs) {
-                                                                                            Text("See Your Match")
-                                                                                            Image(systemName: "sparkles")
-                                                                                                .font(.system(size: 14, weight: .semibold))
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                                .glassButton(isPressed: buttonPressed, isDisabled: !isFormValid)
-                                                                                .disabled(!isFormValid || isLoading)
-                                                                                .padding(.horizontal, Spacing.xl)
-                                                                                .padding(.top, Spacing.lg)
-                                                                                .padding(.bottom, Spacing.huge)
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    .scaleEffect(contentScale)
-                                                                    .opacity(contentOpacity)
-                                                                }
-                                                                .onAppear {
-                                                                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                                                        contentScale = 1.0
-                                                                        contentOpacity = 1.0
-                                                                    }
-                                                                    startInitialRotation()
-                                                                }
-                                                            }
-                                                            
-                                                            private func startInitialRotation() {
-                                                                withAnimation(.linear(duration: AnimationDuration.wheelRotation).repeatForever(autoreverses: false)) {
-                                                                    wheelRotation = 360
-                                                                }
-                                                            }
-                                                            
-                                                            private func updateWheelRotation() {
-                                                                guard let sign = partnerZodiacSign else { return }
-                                                                let signIndex = ZodiacUtils.zodiacSignIndex(sign)
-                                                                let targetRotation = Double(signIndex) * 30
-                                                                
-                                                                withAnimation(.spring(response: 1.2, dampingFraction: 0.7)) {
-                                                                    wheelRotation = targetRotation
-                                                                }
-                                                            }
-                                                        }
+                                                )
+                                        }
+                                    } else {
+                                        DatePicker("", selection: $birthday, displayedComponents: .date)
+                                            .labelsHidden()
+                                            .datePickerStyle(.compact)
+                                            .accentColor(AppColors.primaryText)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(.vertical, Spacing.xs)
+                                            .padding(.horizontal, Spacing.sm)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 12)
+                                                    .fill(Color.white)
+                                                    .shadow(color: Color.black.opacity(0.05), radius: 4, y: 2)
+                                            )
+                                            .onChange(of: birthday) { _, _ in
+                                                updateWheelRotation()
+                                            }
+                                    }
+                                }
+
+                                VStack(alignment: .leading, spacing: Spacing.xs) {
+                                    Text("Time")
+                                        .font(Typography.labelSmall)
+                                        .foregroundColor(AppColors.secondaryText)
+                                        .textCase(.uppercase)
+                                        .tracking(0.5)
+
+                                    if !timeSet {
+                                        Button(action: {
+                                            timeSet = true
+                                            let haptic = UIImpactFeedbackGenerator(style: .light)
+                                            haptic.impactOccurred()
+                                        }) {
+                                            Text("Select time")
+                                                .font(Typography.bodyMedium)
+                                                .foregroundColor(AppColors.tertiaryText)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .padding(.vertical, Spacing.sm)
+                                                .padding(.horizontal, Spacing.md)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 12)
+                                                        .fill(Color.white)
+                                                        .shadow(color: Color.black.opacity(0.05), radius: 4, y: 2)
+                                                )
+                                        }
+                                    } else {
+                                        DatePicker("", selection: $timeOfBirth, displayedComponents: .hourAndMinute)
+                                            .labelsHidden()
+                                            .datePickerStyle(.compact)
+                                            .accentColor(AppColors.primaryText)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(.vertical, Spacing.xs)
+                                            .padding(.horizontal, Spacing.sm)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 12)
+                                                    .fill(Color.white)
+                                                    .shadow(color: Color.black.opacity(0.05), radius: 4, y: 2)
+                                            )
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, Spacing.xl)
+
+                        Button(action: {
+                            guard isFormValid else { return }
+                            let haptic = UIImpactFeedbackGenerator(style: .medium)
+                            haptic.impactOccurred()
+
+                            isLoading = true
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                buttonPressed = true
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                buttonPressed = false
+                                onSubmit()
+                            }
+                        }) {
+                            if isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            } else {
+                                HStack(spacing: Spacing.xs) {
+                                    Text("See Your Match")
+                                    Image(systemName: "sparkles")
+                                        .font(.system(size: 14, weight: .semibold))
+                                }
+                            }
+                        }
+                        .glassButton(isPressed: buttonPressed, isDisabled: !isFormValid)
+                        .disabled(!isFormValid || isLoading)
+                        .padding(.horizontal, Spacing.xl)
+                        .padding(.top, Spacing.lg)
+                        .padding(.bottom, Spacing.huge)
+                    }
+                    .padding(.bottom, keyboardHeight)
+                }
+                .onTapGesture {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+            }
+            .scaleEffect(contentScale)
+            .opacity(contentOpacity)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                contentScale = 1.0
+                contentOpacity = 1.0
+            }
+            startInitialRotation()
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
+                if let frame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                    self.keyboardHeight = frame.height
+                }
+            }
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+                self.keyboardHeight = 0
+            }
+        }
+    }
+
+    private func startInitialRotation() {
+        withAnimation(.linear(duration: AnimationDuration.wheelRotation).repeatForever(autoreverses: false)) {
+            wheelRotation = 360
+        }
+    }
+
+    private func updateWheelRotation() {
+        guard let sign = partnerZodiacSign else { return }
+        let signIndex = ZodiacUtils.zodiacSignIndex(sign)
+        let targetRotation = Double(signIndex) * 30
+
+        withAnimation(.spring(response: 1.2, dampingFraction: 0.7)) {
+            wheelRotation = targetRotation
+        }
+    }
+}
 
 // MARK: - Results View
 struct ResultsView: View {
